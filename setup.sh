@@ -262,62 +262,82 @@ echo -e "  ${GREEN}+ Workspace launcher configured (runs at login)${NC}"
 echo -e "  ${GREEN}+ Bash aliases configured (restart terminal to use)${NC}"
 
 # ============================================
-# Optional Modules (User Prompt)
+# Optional Modules (Sequential Installation)
 # ============================================
 if [ "$SKIP_OPTIONAL" = true ]; then
     echo -e "\n${GRAY}=== Optional Modules Skipped ===${NC}"
 else
     echo -e "\n${MAGENTA}=== Optional Modules ===${NC}"
+    echo -e "${GRAY}  The following modules are optional. You will be prompted for each.${NC}"
 
     # --- [1/2] Claude Code Setup ---
-    echo -e "\n${NC}[1/2] Claude Code${NC}"
+    echo -e "\n${MAGENTA}--- Step 1 of 2: Claude Code ---${NC}"
+
     if command_exists claude; then
         claude_version=$(claude --version 2>/dev/null)
         echo -e "  ${GREEN}+ Already installed: $claude_version${NC}"
         echo -e "  ${GRAY}i Run 'claude-code-setup.sh' separately to reconfigure MCP servers${NC}"
+        echo -e "  ${GREEN}[1/2] Complete${NC}"
     else
         echo -e "  ${YELLOW}- Not installed${NC}"
         if prompt_optional "Claude Code (includes MCP servers setup)"; then
             echo -e "  ${CYAN}> Running Claude Code setup...${NC}"
+            echo ""
 
             SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
             CLAUDE_SETUP_SCRIPT="$SCRIPT_DIR/claude-code-setup.sh"
 
             if [ -f "$CLAUDE_SETUP_SCRIPT" ]; then
-                source "$CLAUDE_SETUP_SCRIPT"
+                bash "$CLAUDE_SETUP_SCRIPT"
             else
                 CLAUDE_SETUP_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/claude-code-setup.sh"
                 echo -e "  ${CYAN}> Downloading claude-code-setup.sh...${NC}"
-                curl -fsSL "$CLAUDE_SETUP_URL" | bash
+                curl -fsSL "$CLAUDE_SETUP_URL" -o /tmp/claude-code-setup.sh
+                bash /tmp/claude-code-setup.sh
+                rm -f /tmp/claude-code-setup.sh
             fi
+
+            echo -e "\n  ${GREEN}[1/2] Claude Code setup complete${NC}"
         else
             echo -e "  ${GRAY}> Skipped${NC}"
+            echo -e "  ${GRAY}[1/2] Skipped${NC}"
         fi
     fi
 
+    # Wait for user to see the completion before moving on
+    echo ""
+
     # --- [2/2] Git Identity Manager ---
-    echo -e "\n${NC}[2/2] Git Identity Manager${NC}"
+    echo -e "${MAGENTA}--- Step 2 of 2: Git Identity Manager ---${NC}"
+
     if [ -f "$HOME/.git-hooks/pre-commit" ] && [ -f "$HOME/.git-identities" ]; then
         identity_count=$(wc -l < "$HOME/.git-identities")
         echo -e "  ${GREEN}+ Already configured with $identity_count identity/identities${NC}"
         echo -e "  ${GRAY}i Run 'git-identity-setup.sh' separately to reconfigure${NC}"
+        echo -e "  ${GREEN}[2/2] Complete${NC}"
     else
         echo -e "  ${YELLOW}- Not configured${NC}"
         if prompt_optional "Git Identity Manager (prompts for author on each commit)"; then
             echo -e "  ${CYAN}> Running Git Identity Manager setup...${NC}"
+            echo ""
 
             SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
             GIT_IDENTITY_SCRIPT="$SCRIPT_DIR/git-identity-setup.sh"
 
             if [ -f "$GIT_IDENTITY_SCRIPT" ]; then
-                source "$GIT_IDENTITY_SCRIPT"
+                bash "$GIT_IDENTITY_SCRIPT"
             else
                 GIT_IDENTITY_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/git-identity-setup.sh"
                 echo -e "  ${CYAN}> Downloading git-identity-setup.sh...${NC}"
-                curl -fsSL "$GIT_IDENTITY_URL" | bash
+                curl -fsSL "$GIT_IDENTITY_URL" -o /tmp/git-identity-setup.sh
+                bash /tmp/git-identity-setup.sh
+                rm -f /tmp/git-identity-setup.sh
             fi
+
+            echo -e "\n  ${GREEN}[2/2] Git Identity Manager setup complete${NC}"
         else
             echo -e "  ${GRAY}> Skipped${NC}"
+            echo -e "  ${GRAY}[2/2] Skipped${NC}"
         fi
     fi
 fi
