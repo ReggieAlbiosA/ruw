@@ -214,46 +214,21 @@ else
     fi
 fi
 
-echo -e "\n${CYAN}=== Setting up Workspace ===${NC}"
+echo -e "\n${CYAN}=== Setting up Workspace Launcher ===${NC}"
 
-# Configuration
-SCRIPT_NAME="reggie-workspace.sh"
-SCRIPT_DEST="$HOME/Desktop/$SCRIPT_NAME"
-REPO_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/$SCRIPT_NAME"
-AUTOSTART_DIR="$HOME/.config/autostart"
-DESKTOP_FILE="$AUTOSTART_DIR/reggie-workspace.desktop"
+# Determine script location (local or remote)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+LAUNCHER_SETUP_SCRIPT="$SCRIPT_DIR/logon-launch-workspace.sh"
 
-echo -e "\n${CYAN}Setting up Reggie Workspace automation...${NC}"
-
-# Download the script
-echo -e "${YELLOW}Downloading $SCRIPT_NAME...${NC}"
-curl -fsSL "$REPO_URL" -o "$SCRIPT_DEST"
-chmod +x "$SCRIPT_DEST"
-echo -e "  ${GREEN}+ Downloaded to $SCRIPT_DEST${NC}"
-
-# Create autostart directory if it doesn't exist
-mkdir -p "$AUTOSTART_DIR"
-
-# Remove old autostart entry if exists
-if [ -f "$DESKTOP_FILE" ]; then
-    rm "$DESKTOP_FILE"
-    echo -e "  ${YELLOW}+ Removed old autostart entry${NC}"
+if [ -f "$LAUNCHER_SETUP_SCRIPT" ]; then
+    # Local: source the script
+    source "$LAUNCHER_SETUP_SCRIPT"
+else
+    # Remote: download and execute from GitHub
+    LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/logon-launch-workspace.sh"
+    echo -e "  ${CYAN}> Downloading logon-launch-workspace.sh...${NC}"
+    curl -fsSL "$LAUNCHER_SETUP_URL" | bash
 fi
-
-# Create autostart desktop entry
-echo -e "${YELLOW}Setting up autostart...${NC}"
-cat > "$DESKTOP_FILE" << EOF
-[Desktop Entry]
-Type=Application
-Name=Reggie Workspace
-Comment=Opens browser tabs and apps on login
-Exec=$SCRIPT_DEST
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-EOF
-
-echo -e "  ${GREEN}+ Autostart entry created${NC}"
 
 # Setup bash aliases
 echo -e "\n${YELLOW}Setting up bash aliases...${NC}"
