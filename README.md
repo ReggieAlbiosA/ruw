@@ -14,10 +14,22 @@ curl -fsSL https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/
 - Downloads workspace launcher to Desktop
 - Creates autostart entry for login
 - Sets up bash aliases (git shortcuts, common commands)
+- Optional: Claude Code CLI with MCP servers
+- Optional: Git Identity Manager (multi-identity commits)
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `setup.sh` | Main installer - runs all setup steps |
+| `logon-launch-workspace.sh` | Sets up autostart for login automation |
+| `launch-workspace.sh` | Workspace launcher (browser tabs + apps) |
+| `claude-code-setup.sh` | Claude Code CLI + MCP server setup |
+| `git-identity-setup.sh` | Git multi-identity manager |
 
 ## Customize
 
-Edit `reggie-workspace.sh` on your Desktop:
+Edit `launch-workspace.sh` on your Desktop:
 
 ```bash
 #!/bin/bash
@@ -35,18 +47,26 @@ obsidian &
 ## Uninstall
 
 ```bash
+# Remove autostart entry
 rm ~/.config/autostart/reggie-workspace.desktop
-rm ~/Desktop/reggie-workspace.sh
+
+# Remove launcher from Desktop
+rm ~/Desktop/launch-workspace.sh
 ```
 
 ## Troubleshooting
 
 **Permission denied:**
 ```bash
-chmod +x ~/Desktop/reggie-workspace.sh
+chmod +x ~/Desktop/launch-workspace.sh
 ```
 
 **Autostart not working:** Check `~/.config/autostart/reggie-workspace.desktop` exists
+
+**Re-run autostart setup only:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/logon-launch-workspace.sh | bash
+```
 
 ## Requirements
 
