@@ -3,7 +3,7 @@
 # Run with: curl -fsSL https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/setup.sh | bash
 #
 # Install overrides:
-#   -y, --yes           Auto-accept all prompts (including optional modules)
+#   -y, --yes           Auto-accept all prompts
 #   --skip-optional     Skip optional modules (Claude Code, Git Identity)
 #   --defaults-only     Same as --skip-optional
 
@@ -43,318 +43,308 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ============================================
-# Progress Bar Functions
+# Helper Functions
 # ============================================
 
-# Progress bar width
-BAR_WIDTH=30
-
-# Draw a progress bar
-# Usage: draw_progress_bar <current> <total> <label>
-draw_progress_bar() {
-    local current=$1
-    local total=$2
-    local label=$3
-    local percent=$((current * 100 / total))
-    local filled=$((current * BAR_WIDTH / total))
-    local empty=$((BAR_WIDTH - filled))
-
-    # Build the bar
-    local bar=""
-    for ((i=0; i<filled; i++)); do bar+="█"; done
-    for ((i=0; i<empty; i++)); do bar+="░"; done
-
-    # Print progress bar (overwrite line)
-    printf "\r  ${CYAN}[${GREEN}%s${GRAY}%s${CYAN}]${NC} ${WHITE}%3d%%${NC} %s" \
-        "$(printf '█%.0s' $(seq 1 $filled 2>/dev/null) 2>/dev/null || echo "")" \
-        "$(printf '░%.0s' $(seq 1 $empty 2>/dev/null) 2>/dev/null || echo "")" \
-        "$percent" "$label"
-}
-
-# Simpler progress bar that works better cross-platform
-show_progress() {
-    local current=$1
-    local total=$2
-    local label=$3
-    local percent=$((current * 100 / total))
-    local filled=$((current * BAR_WIDTH / total))
-    local empty=$((BAR_WIDTH - filled))
-
-    local bar_filled=""
-    local bar_empty=""
-
-    for ((i=0; i<filled; i++)); do bar_filled+="█"; done
-    for ((i=0; i<empty; i++)); do bar_empty+="░"; done
-
-    echo -e "  ${CYAN}[${GREEN}${bar_filled}${GRAY}${bar_empty}${CYAN}]${NC} ${WHITE}${percent}%${NC} ${label}"
-}
-
-# Spinner for active installations
-# Usage: run_with_spinner "command" "message"
-run_with_spinner() {
-    local cmd=$1
-    local msg=$2
-    local spin_chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    local pid
-
-    # Run command in background
-    eval "$cmd" &>/dev/null &
-    pid=$!
-
-    # Show spinner while command runs
-    local i=0
-    while kill -0 $pid 2>/dev/null; do
-        local char="${spin_chars:$i:1}"
-        printf "\r  ${CYAN}%s${NC} %s" "$char" "$msg"
-        i=$(( (i + 1) % ${#spin_chars} ))
-        sleep 0.1
-    done
-
-    # Wait for command to finish and get exit code
-    wait $pid
-    local exit_code=$?
-
-    # Clear spinner line
-    printf "\r%*s\r" 60 ""
-
-    return $exit_code
-}
-
-# Simple progress indicator that shows activity
-show_installing() {
-    local name=$1
-    echo -e "  ${CYAN}⟳${NC} Installing ${name}..."
-}
-
-show_complete() {
-    local name=$1
-    local version=$2
-    if [ -n "$version" ]; then
-        echo -e "  ${GREEN}✓${NC} ${name} installed: ${version}"
-    else
-        echo -e "  ${GREEN}✓${NC} ${name} installed"
-    fi
-}
-
-show_already_installed() {
-    local name=$1
-    local version=$2
-    echo -e "  ${GREEN}✓${NC} ${name} already installed: ${version}"
-}
-
-show_failed() {
-    local name=$1
-    echo -e "  ${RED}✗${NC} ${name} installation failed"
-}
-
-show_skipped() {
-    local name=$1
-    echo -e "  ${GRAY}○${NC} ${name} skipped"
-}
-
-# Helper function to check if a command exists
 command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Helper function to prompt user (respects AUTO_YES flag)
+# Prompt for installation (respects AUTO_YES)
 prompt_install() {
     if [ "$AUTO_YES" = true ]; then
-        return 0  # Auto-accept
+        echo -e "  ${CYAN}> Auto-accepting${NC}"
+        return 0
     fi
-    read -p "  > Install $1? (y/n) " -n 1 -r
-    echo
-    [[ $REPLY =~ ^[Yy]$ ]]
+    while true; do
+        read -p "  > Install $1? (y/n): " -r
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            return 0
+        elif [[ $REPLY =~ ^[Nn]$ ]]; then
+            return 1
+        else
+            echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+        fi
+    done
 }
 
-# Helper function to prompt for optional modules
+# Prompt for optional modules
 prompt_optional() {
     if [ "$SKIP_OPTIONAL" = true ]; then
-        return 1  # Skip
+        return 1
     fi
     if [ "$AUTO_YES" = true ]; then
-        return 0  # Auto-accept
+        echo -e "  ${CYAN}> Auto-accepting${NC}"
+        return 0
     fi
-    read -p "  > Install $1? (y/n) " -n 1 -r
-    echo
-    [[ $REPLY =~ ^[Yy]$ ]]
+    while true; do
+        read -p "  > Install $1? (y/n): " -r
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            return 0
+        elif [[ $REPLY =~ ^[Nn]$ ]]; then
+            return 1
+        else
+            echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+        fi
+    done
 }
 
-echo -e "\n${CYAN}╔════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║${NC}    ${WHITE}Reggie Ubuntu Workspace Setup${NC}       ${CYAN}║${NC}"
-echo -e "${CYAN}╚════════════════════════════════════════╝${NC}"
+# Track installation progress
+TOTAL_STEPS=8
+CURRENT_STEP=0
+INSTALLED_APPS=()
+SKIPPED_APPS=()
+
+update_progress() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    local percent=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+    echo -e "\n  ${CYAN}Progress: ${WHITE}${CURRENT_STEP}/${TOTAL_STEPS}${NC} (${percent}%)"
+    echo -e "  ${CYAN}────────────────────────────────${NC}"
+}
+
+log_installed() {
+    INSTALLED_APPS+=("$1")
+    echo -e "  ${GREEN}✓ Added to installed: $1${NC}"
+}
+
+log_skipped() {
+    SKIPPED_APPS+=("$1")
+    echo -e "  ${GRAY}○ Skipped: $1${NC}"
+}
+
+show_realtime_header() {
+    echo -e "\n  ${YELLOW}┌─ Installation Output ─┐${NC}"
+}
+
+show_realtime_footer() {
+    echo -e "  ${YELLOW}└───────────────────────┘${NC}"
+}
+
+# ============================================
+# Main Setup
+# ============================================
+
+echo -e "\n${CYAN}========================================${NC}"
+echo -e "${WHITE}   Reggie Ubuntu Workspace Setup${NC}"
+echo -e "${CYAN}========================================${NC}"
 
 if [ "$AUTO_YES" = true ]; then
-    echo -e "${GRAY}  Running with --yes (auto-accept all)${NC}"
+    echo -e "${GRAY}  Mode: Auto-accept all${NC}"
 fi
 if [ "$SKIP_OPTIONAL" = true ]; then
-    echo -e "${GRAY}  Running with --skip-optional${NC}"
+    echo -e "${GRAY}  Mode: Skip optional modules${NC}"
 fi
 
-# ============================================
-# Core Dependencies (Auto-install)
-# ============================================
-echo -e "\n${CYAN}━━━ Installing Core Dependencies ━━━${NC}"
-echo ""
+echo -e "\n${CYAN}You will be prompted for each installation.${NC}"
 
-CORE_TOTAL=6
-CORE_CURRENT=0
-
-# --- Check Node.js ---
-echo -e "${WHITE}[1/6] Node.js${NC}"
+# ============================================
+# [1/8] Node.js
+# ============================================
+echo -e "\n${WHITE}[1/8] Node.js${NC}"
 if command_exists node; then
-    show_already_installed "Node.js" "$(node --version)"
+    echo -e "  ${GREEN}✓ Already installed: $(node --version)${NC}"
+    log_installed "Node.js $(node --version)"
 else
-    show_installing "Node.js"
-    curl -fsSL https://deb.nodesource.com/setup_lts.x 2>/dev/null | sudo -E bash - &>/dev/null
-    sudo apt-get install -y nodejs &>/dev/null
-    if command_exists node; then
-        show_complete "Node.js" "$(node --version)"
+    echo -e "  ${YELLOW}○ Not installed${NC}"
+    if prompt_install "Node.js"; then
+        echo -e "  ${CYAN}> Installing Node.js (realtime output)...${NC}"
+        show_realtime_header
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        show_realtime_footer
+        if command_exists node; then
+            echo -e "  ${GREEN}✓ Installed: $(node --version)${NC}"
+            log_installed "Node.js $(node --version)"
+        else
+            echo -e "  ${RED}✗ Installation failed${NC}"
+        fi
     else
-        show_failed "Node.js"
+        log_skipped "Node.js"
     fi
 fi
-CORE_CURRENT=$((CORE_CURRENT + 1))
-show_progress $CORE_CURRENT $CORE_TOTAL "Core dependencies"
-echo ""
+update_progress
 
-# --- Check Git ---
-echo -e "${WHITE}[2/6] Git${NC}"
+# ============================================
+# [2/8] Git
+# ============================================
+echo -e "\n${WHITE}[2/8] Git${NC}"
 if command_exists git; then
-    show_already_installed "Git" "$(git --version | cut -d' ' -f3)"
+    echo -e "  ${GREEN}✓ Already installed: $(git --version)${NC}"
+    log_installed "Git $(git --version | cut -d' ' -f3)"
 else
-    show_installing "Git"
-    sudo apt-get update &>/dev/null && sudo apt-get install -y git &>/dev/null
-    if command_exists git; then
-        show_complete "Git" "$(git --version | cut -d' ' -f3)"
+    echo -e "  ${YELLOW}○ Not installed${NC}"
+    if prompt_install "Git"; then
+        echo -e "  ${CYAN}> Installing Git (realtime output)...${NC}"
+        show_realtime_header
+        sudo apt-get update
+        sudo apt-get install -y git
+        show_realtime_footer
+        if command_exists git; then
+            echo -e "  ${GREEN}✓ Installed: $(git --version)${NC}"
+            log_installed "Git $(git --version | cut -d' ' -f3)"
+        else
+            echo -e "  ${RED}✗ Installation failed${NC}"
+        fi
     else
-        show_failed "Git"
+        log_skipped "Git"
     fi
 fi
-CORE_CURRENT=$((CORE_CURRENT + 1))
-show_progress $CORE_CURRENT $CORE_TOTAL "Core dependencies"
-echo ""
+update_progress
 
-# --- Check pnpm ---
-echo -e "${WHITE}[3/6] pnpm${NC}"
+# ============================================
+# [3/8] pnpm
+# ============================================
+echo -e "\n${WHITE}[3/8] pnpm${NC}"
 if command_exists pnpm; then
-    show_already_installed "pnpm" "v$(pnpm --version)"
+    echo -e "  ${GREEN}✓ Already installed: v$(pnpm --version)${NC}"
+    log_installed "pnpm v$(pnpm --version)"
 else
-    show_installing "pnpm"
-    curl -fsSL https://get.pnpm.io/install.sh 2>/dev/null | sh - &>/dev/null
-    export PNPM_HOME="$HOME/.local/share/pnpm"
-    export PATH="$PNPM_HOME:$PATH"
-    if command_exists pnpm; then
-        show_complete "pnpm" "v$(pnpm --version)"
+    echo -e "  ${YELLOW}○ Not installed${NC}"
+    if prompt_install "pnpm"; then
+        echo -e "  ${CYAN}> Installing pnpm (realtime output)...${NC}"
+        show_realtime_header
+        curl -fsSL https://get.pnpm.io/install.sh | sh -
+        export PNPM_HOME="$HOME/.local/share/pnpm"
+        export PATH="$PNPM_HOME:$PATH"
+        show_realtime_footer
+        if command_exists pnpm; then
+            echo -e "  ${GREEN}✓ Installed: v$(pnpm --version)${NC}"
+            log_installed "pnpm v$(pnpm --version)"
+        else
+            echo -e "  ${YELLOW}! Installed (restart terminal to use)${NC}"
+            log_installed "pnpm (restart needed)"
+        fi
     else
-        echo -e "  ${YELLOW}!${NC} pnpm installed (restart terminal to use)"
+        log_skipped "pnpm"
     fi
 fi
-CORE_CURRENT=$((CORE_CURRENT + 1))
-show_progress $CORE_CURRENT $CORE_TOTAL "Core dependencies"
-echo ""
+update_progress
 
-# --- Check VS Code ---
-echo -e "${WHITE}[4/6] VS Code${NC}"
+# ============================================
+# [4/8] VS Code
+# ============================================
+echo -e "\n${WHITE}[4/8] VS Code${NC}"
 if command_exists code; then
-    show_already_installed "VS Code" "v$(code --version 2>/dev/null | head -1)"
+    echo -e "  ${GREEN}✓ Already installed: v$(code --version 2>/dev/null | head -1)${NC}"
+    log_installed "VS Code v$(code --version 2>/dev/null | head -1)"
 else
-    show_installing "VS Code"
-    sudo snap install code --classic &>/dev/null
-    if command_exists code; then
-        show_complete "VS Code" "v$(code --version 2>/dev/null | head -1)"
+    echo -e "  ${YELLOW}○ Not installed${NC}"
+    if prompt_install "VS Code"; then
+        echo -e "  ${CYAN}> Installing VS Code via snap (realtime output)...${NC}"
+        show_realtime_header
+        sudo snap install code --classic
+        show_realtime_footer
+        if command_exists code; then
+            echo -e "  ${GREEN}✓ Installed: v$(code --version 2>/dev/null | head -1)${NC}"
+            log_installed "VS Code v$(code --version 2>/dev/null | head -1)"
+        else
+            echo -e "  ${YELLOW}! Installed (restart terminal to use)${NC}"
+            log_installed "VS Code (restart needed)"
+        fi
     else
-        echo -e "  ${YELLOW}!${NC} VS Code installed (restart terminal to use)"
+        log_skipped "VS Code"
     fi
 fi
-CORE_CURRENT=$((CORE_CURRENT + 1))
-show_progress $CORE_CURRENT $CORE_TOTAL "Core dependencies"
-echo ""
+update_progress
 
-# --- Check Cursor ---
-echo -e "${WHITE}[5/6] Cursor${NC}"
+# ============================================
+# [5/8] Cursor
+# ============================================
+echo -e "\n${WHITE}[5/8] Cursor${NC}"
 if command_exists cursor; then
-    show_already_installed "Cursor" ""
+    echo -e "  ${GREEN}✓ Already installed${NC}"
+    log_installed "Cursor"
 else
-    show_installing "Cursor"
-    CURSOR_DIR="$HOME/.local/bin"
-    mkdir -p "$CURSOR_DIR"
-    curl -fsSL "https://downloader.cursor.sh/linux/appImage/x64" -o "$CURSOR_DIR/cursor.AppImage" 2>/dev/null
-    chmod +x "$CURSOR_DIR/cursor.AppImage"
-    ln -sf "$CURSOR_DIR/cursor.AppImage" "$CURSOR_DIR/cursor"
-    export PATH="$CURSOR_DIR:$PATH"
-    if [ -f "$CURSOR_DIR/cursor.AppImage" ]; then
-        show_complete "Cursor" ""
+    echo -e "  ${YELLOW}○ Not installed${NC}"
+    if prompt_install "Cursor"; then
+        echo -e "  ${CYAN}> Downloading Cursor AppImage (realtime output)...${NC}"
+        show_realtime_header
+        CURSOR_DIR="$HOME/.local/bin"
+        mkdir -p "$CURSOR_DIR"
+        echo "Downloading from https://downloader.cursor.sh/linux/appImage/x64..."
+        curl -fSL "https://downloader.cursor.sh/linux/appImage/x64" -o "$CURSOR_DIR/cursor.AppImage" --progress-bar
+        chmod +x "$CURSOR_DIR/cursor.AppImage"
+        ln -sf "$CURSOR_DIR/cursor.AppImage" "$CURSOR_DIR/cursor"
+        export PATH="$CURSOR_DIR:$PATH"
+        echo "Downloaded to $CURSOR_DIR/cursor.AppImage"
+        show_realtime_footer
+        if [ -f "$CURSOR_DIR/cursor.AppImage" ]; then
+            echo -e "  ${GREEN}✓ Installed to ~/.local/bin${NC}"
+            log_installed "Cursor"
+        else
+            echo -e "  ${RED}✗ Installation failed${NC}"
+        fi
     else
-        show_failed "Cursor"
+        log_skipped "Cursor"
     fi
 fi
-CORE_CURRENT=$((CORE_CURRENT + 1))
-show_progress $CORE_CURRENT $CORE_TOTAL "Core dependencies"
-echo ""
+update_progress
 
-# --- Check Google Antigravity ---
-echo -e "${WHITE}[6/6] Google Antigravity${NC}"
+# ============================================
+# [6/8] Google Antigravity
+# ============================================
+echo -e "\n${WHITE}[6/8] Google Antigravity${NC}"
 if command_exists antigravity; then
-    show_already_installed "Antigravity" ""
+    echo -e "  ${GREEN}✓ Already installed${NC}"
+    log_installed "Antigravity"
 else
-    show_installing "Google Antigravity"
-    ANTIGRAVITY_DIR="$HOME/.local/bin"
-    mkdir -p "$ANTIGRAVITY_DIR"
-    curl -fsSL "https://antigravity.codes/download/linux" -o "$ANTIGRAVITY_DIR/antigravity.AppImage" 2>/dev/null
-    chmod +x "$ANTIGRAVITY_DIR/antigravity.AppImage"
-    ln -sf "$ANTIGRAVITY_DIR/antigravity.AppImage" "$ANTIGRAVITY_DIR/antigravity"
-    export PATH="$ANTIGRAVITY_DIR:$PATH"
-    if [ -f "$ANTIGRAVITY_DIR/antigravity.AppImage" ]; then
-        show_complete "Antigravity" ""
+    echo -e "  ${YELLOW}○ Not installed${NC}"
+    if prompt_install "Google Antigravity"; then
+        echo -e "  ${CYAN}> Downloading Antigravity AppImage (realtime output)...${NC}"
+        show_realtime_header
+        ANTIGRAVITY_DIR="$HOME/.local/bin"
+        mkdir -p "$ANTIGRAVITY_DIR"
+        echo "Downloading from https://antigravity.codes/download/linux..."
+        curl -fSL "https://antigravity.codes/download/linux" -o "$ANTIGRAVITY_DIR/antigravity.AppImage" --progress-bar
+        chmod +x "$ANTIGRAVITY_DIR/antigravity.AppImage"
+        ln -sf "$ANTIGRAVITY_DIR/antigravity.AppImage" "$ANTIGRAVITY_DIR/antigravity"
+        export PATH="$ANTIGRAVITY_DIR:$PATH"
+        echo "Downloaded to $ANTIGRAVITY_DIR/antigravity.AppImage"
+        show_realtime_footer
+        if [ -f "$ANTIGRAVITY_DIR/antigravity.AppImage" ]; then
+            echo -e "  ${GREEN}✓ Installed to ~/.local/bin${NC}"
+            log_installed "Antigravity"
+        else
+            echo -e "  ${RED}✗ Installation failed${NC}"
+        fi
     else
-        show_failed "Antigravity"
+        log_skipped "Antigravity"
     fi
 fi
-CORE_CURRENT=$((CORE_CURRENT + 1))
-show_progress $CORE_CURRENT $CORE_TOTAL "Core dependencies"
-echo ""
-
-echo -e "${GREEN}✓ Core dependencies complete${NC}"
+update_progress
 
 # ============================================
-# Workspace Launcher (Auto-setup)
+# [7/8] Workspace Launcher + Aliases (auto-install, no prompt)
 # ============================================
-echo -e "\n${CYAN}━━━ Setting up Workspace Launcher ━━━${NC}"
-echo ""
+echo -e "\n${WHITE}[7/8] Workspace Launcher & Bash Aliases${NC}"
+echo -e "  ${CYAN}> Configuring workspace automation...${NC}"
+{
+    echo -e "  ${CYAN}> Configuring workspace launcher...${NC}"
+    show_realtime_header
 
-show_progress 0 2 "Workspace setup"
-echo ""
+    # Download/run launcher setup
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+    LAUNCHER_SETUP_SCRIPT="$SCRIPT_DIR/logon-launch-workspace.sh"
 
-# Step 1: Download launcher
-echo -e "${WHITE}[1/2] Downloading launcher${NC}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
-LAUNCHER_SETUP_SCRIPT="$SCRIPT_DIR/logon-launch-workspace.sh"
+    if [ -f "$LAUNCHER_SETUP_SCRIPT" ]; then
+        echo "Running local logon-launch-workspace.sh..."
+        bash "$LAUNCHER_SETUP_SCRIPT"
+    else
+        LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/logon-launch-workspace.sh"
+        echo "Downloading logon-launch-workspace.sh..."
+        curl -fsSL "$LAUNCHER_SETUP_URL" -o /tmp/logon-launch-workspace.sh
+        bash /tmp/logon-launch-workspace.sh
+        rm -f /tmp/logon-launch-workspace.sh
+    fi
 
-if [ -f "$LAUNCHER_SETUP_SCRIPT" ]; then
-    show_installing "workspace launcher"
-    bash "$LAUNCHER_SETUP_SCRIPT" &>/dev/null
-    show_complete "Workspace launcher" ""
-else
-    show_installing "workspace launcher"
-    LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/logon-launch-workspace.sh"
-    curl -fsSL "$LAUNCHER_SETUP_URL" -o /tmp/logon-launch-workspace.sh 2>/dev/null
-    bash /tmp/logon-launch-workspace.sh &>/dev/null
-    rm -f /tmp/logon-launch-workspace.sh
-    show_complete "Workspace launcher" ""
-fi
+    # Setup bash aliases
+    echo ""
+    echo "Configuring bash aliases..."
 
-show_progress 1 2 "Workspace setup"
-echo ""
+    START_MARKER="# >>> REGGIE-WORKSPACE-ALIASES >>>"
+    END_MARKER="# <<< REGGIE-WORKSPACE-ALIASES <<<"
 
-# Step 2: Setup bash aliases
-echo -e "${WHITE}[2/2] Configuring aliases${NC}"
-show_installing "bash aliases"
-
-START_MARKER="# >>> REGGIE-WORKSPACE-ALIASES >>>"
-END_MARKER="# <<< REGGIE-WORKSPACE-ALIASES <<<"
-
-ALIASES_CONTENT="$START_MARKER
+    ALIASES_CONTENT="$START_MARKER
 # Git Aliases
 alias gs='git status'
 alias ga='git add'
@@ -387,61 +377,66 @@ alias cp='cp -i'
 alias mv='mv -i'
 $END_MARKER"
 
-BASHRC="$HOME/.bashrc"
+    BASHRC="$HOME/.bashrc"
 
-if grep -q "$START_MARKER" "$BASHRC" 2>/dev/null; then
-    sed -i "/$START_MARKER/,/$END_MARKER/d" "$BASHRC"
-    echo "$ALIASES_CONTENT" >> "$BASHRC"
-else
-    echo "" >> "$BASHRC"
-    echo "$ALIASES_CONTENT" >> "$BASHRC"
+    if grep -q "$START_MARKER" "$BASHRC" 2>/dev/null; then
+        sed -i "/$START_MARKER/,/$END_MARKER/d" "$BASHRC"
+        echo "$ALIASES_CONTENT" >> "$BASHRC"
+        echo "Updated bash aliases in $BASHRC"
+    else
+        echo "" >> "$BASHRC"
+        echo "$ALIASES_CONTENT" >> "$BASHRC"
+        echo "Added bash aliases to $BASHRC"
+    fi
+
+    show_realtime_footer
+    echo -e "  ${GREEN}✓ Workspace launcher configured${NC}"
+    echo -e "  ${GREEN}✓ Bash aliases configured${NC}"
+    log_installed "Workspace Launcher"
+    log_installed "Bash Aliases"
+}
+update_progress
+
+# ============================================
+# Summary After Core Setup
+# ============================================
+echo -e "\n${GREEN}========================================${NC}"
+echo -e "${WHITE}   Core Setup Complete${NC}"
+echo -e "${GREEN}========================================${NC}"
+
+echo -e "\n${GREEN}Installed:${NC}"
+for app in "${INSTALLED_APPS[@]}"; do
+    echo -e "  ${GREEN}✓${NC} $app"
+done
+
+if [ ${#SKIPPED_APPS[@]} -gt 0 ]; then
+    echo -e "\n${GRAY}Skipped:${NC}"
+    for app in "${SKIPPED_APPS[@]}"; do
+        echo -e "  ${GRAY}○${NC} $app"
+    done
 fi
 
-show_complete "Bash aliases" ""
-show_progress 2 2 "Workspace setup"
-echo ""
-
-echo -e "${GREEN}✓ Workspace setup complete${NC}"
-
 # ============================================
-# Default Setup Summary
-# ============================================
-echo -e "\n${GREEN}╔════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║${NC}      ${WHITE}Default Setup Complete${NC}            ${GREEN}║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
-echo -e "  ${GREEN}✓${NC} Core dependencies installed"
-echo -e "  ${GREEN}✓${NC} Workspace launcher configured"
-echo -e "  ${GREEN}✓${NC} Bash aliases configured"
-
-# ============================================
-# Optional Modules (Sequential Installation)
+# [8/8] Optional Modules
 # ============================================
 if [ "$SKIP_OPTIONAL" = true ]; then
-    echo -e "\n${GRAY}━━━ Optional Modules Skipped ━━━${NC}"
+    echo -e "\n${GRAY}Optional modules skipped (--skip-optional)${NC}"
+    update_progress
 else
-    echo -e "\n${MAGENTA}━━━ Optional Modules ━━━${NC}"
-    echo -e "${GRAY}  You will be prompted for each optional module.${NC}"
-    echo ""
+    echo -e "\n${MAGENTA}========================================${NC}"
+    echo -e "${WHITE}   Optional Modules${NC}"
+    echo -e "${MAGENTA}========================================${NC}"
 
-    OPT_TOTAL=2
-    OPT_CURRENT=0
-
-    show_progress $OPT_CURRENT $OPT_TOTAL "Optional modules"
-    echo ""
-
-    # --- [1/2] Claude Code Setup ---
-    echo -e "${MAGENTA}┌─ Step 1 of 2: Claude Code ─┐${NC}"
-
+    # --- Claude Code ---
+    echo -e "\n${MAGENTA}[Optional 1/2] Claude Code${NC}"
     if command_exists claude; then
         claude_version=$(claude --version 2>/dev/null)
-        show_already_installed "Claude Code" "$claude_version"
-        echo -e "  ${GRAY}ℹ Run 'claude-code-setup.sh' to reconfigure MCP servers${NC}"
-    else
-        echo -e "  ${YELLOW}○${NC} Not installed"
-        if prompt_optional "Claude Code (includes MCP servers)"; then
-            echo ""
-            show_installing "Claude Code"
-            echo ""
+        echo -e "  ${GREEN}✓ Already installed: $claude_version${NC}"
+        log_installed "Claude Code $claude_version"
+        # Still run MCP configuration even if Claude Code is already installed
+        if prompt_optional "Configure MCP servers"; then
+            echo -e "  ${CYAN}> Configuring MCP servers...${NC}"
+            show_realtime_header
 
             SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
             CLAUDE_SETUP_SCRIPT="$SCRIPT_DIR/claude-code-setup.sh"
@@ -450,37 +445,58 @@ else
                 bash "$CLAUDE_SETUP_SCRIPT"
             else
                 CLAUDE_SETUP_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/claude-code-setup.sh"
-                curl -fsSL "$CLAUDE_SETUP_URL" -o /tmp/claude-code-setup.sh 2>/dev/null
+                echo "Downloading claude-code-setup.sh..."
+                curl -fsSL "$CLAUDE_SETUP_URL" -o /tmp/claude-code-setup.sh
                 bash /tmp/claude-code-setup.sh
                 rm -f /tmp/claude-code-setup.sh
             fi
 
-            echo ""
-            show_complete "Claude Code" ""
+            show_realtime_footer
+            echo -e "  ${GREEN}✓ MCP servers configured${NC}"
         else
-            show_skipped "Claude Code"
+            log_skipped "MCP servers"
+        fi
+    else
+        echo -e "  ${YELLOW}○ Not installed${NC}"
+        if prompt_optional "Claude Code (includes MCP servers)"; then
+            echo -e "  ${CYAN}> Running Claude Code setup (realtime output)...${NC}"
+            show_realtime_header
+
+            SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+            CLAUDE_SETUP_SCRIPT="$SCRIPT_DIR/claude-code-setup.sh"
+
+            if [ -f "$CLAUDE_SETUP_SCRIPT" ]; then
+                bash "$CLAUDE_SETUP_SCRIPT"
+            else
+                CLAUDE_SETUP_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/claude-code-setup.sh"
+                echo "Downloading claude-code-setup.sh..."
+                curl -fsSL "$CLAUDE_SETUP_URL" -o /tmp/claude-code-setup.sh
+                bash /tmp/claude-code-setup.sh
+                rm -f /tmp/claude-code-setup.sh
+            fi
+
+            show_realtime_footer
+            echo -e "  ${GREEN}✓ Claude Code setup complete${NC}"
+            log_installed "Claude Code"
+        else
+            log_skipped "Claude Code"
         fi
     fi
 
-    OPT_CURRENT=$((OPT_CURRENT + 1))
-    show_progress $OPT_CURRENT $OPT_TOTAL "Optional modules"
-    echo ""
-    echo -e "${MAGENTA}└─ Step 1 complete ─┘${NC}"
-    echo ""
+    echo -e "\n  ${CYAN}Progress: ${WHITE}7.5/8${NC} (94%)"
+    echo -e "  ${CYAN}────────────────────────────────${NC}"
 
-    # --- [2/2] Git Identity Manager ---
-    echo -e "${MAGENTA}┌─ Step 2 of 2: Git Identity Manager ─┐${NC}"
-
+    # --- Git Identity Manager ---
+    echo -e "\n${MAGENTA}[Optional 2/2] Git Identity Manager${NC}"
     if [ -f "$HOME/.git-hooks/pre-commit" ] && [ -f "$HOME/.git-identities" ]; then
         identity_count=$(wc -l < "$HOME/.git-identities")
-        show_already_installed "Git Identity Manager" "$identity_count identities"
-        echo -e "  ${GRAY}ℹ Run 'git-identity-setup.sh' to reconfigure${NC}"
+        echo -e "  ${GREEN}✓ Already configured: $identity_count identities${NC}"
+        log_installed "Git Identity Manager ($identity_count identities)"
     else
-        echo -e "  ${YELLOW}○${NC} Not configured"
+        echo -e "  ${YELLOW}○ Not configured${NC}"
         if prompt_optional "Git Identity Manager"; then
-            echo ""
-            show_installing "Git Identity Manager"
-            echo ""
+            echo -e "  ${CYAN}> Running Git Identity setup (realtime output)...${NC}"
+            show_realtime_header
 
             SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
             GIT_IDENTITY_SCRIPT="$SCRIPT_DIR/git-identity-setup.sh"
@@ -489,32 +505,44 @@ else
                 bash "$GIT_IDENTITY_SCRIPT"
             else
                 GIT_IDENTITY_URL="https://raw.githubusercontent.com/blueivy828/reggie-ubuntu-workspace/main/git-identity-setup.sh"
-                curl -fsSL "$GIT_IDENTITY_URL" -o /tmp/git-identity-setup.sh 2>/dev/null
+                echo "Downloading git-identity-setup.sh..."
+                curl -fsSL "$GIT_IDENTITY_URL" -o /tmp/git-identity-setup.sh
                 bash /tmp/git-identity-setup.sh
                 rm -f /tmp/git-identity-setup.sh
             fi
 
-            echo ""
-            show_complete "Git Identity Manager" ""
+            show_realtime_footer
+            echo -e "  ${GREEN}✓ Git Identity Manager setup complete${NC}"
+            log_installed "Git Identity Manager"
         else
-            show_skipped "Git Identity Manager"
+            log_skipped "Git Identity Manager"
         fi
     fi
 
-    OPT_CURRENT=$((OPT_CURRENT + 1))
-    show_progress $OPT_CURRENT $OPT_TOTAL "Optional modules"
-    echo ""
-    echo -e "${MAGENTA}└─ Step 2 complete ─┘${NC}"
+    update_progress
 fi
 
 # ============================================
 # Final Summary
 # ============================================
-echo -e "\n${GREEN}╔════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║${NC}        ${WHITE}All Setup Complete!${NC}             ${GREEN}║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
-echo ""
-show_progress 8 8 "Total progress"
-echo ""
-echo -e "${YELLOW}Restart your terminal for all changes to take effect.${NC}"
+echo -e "\n${GREEN}========================================${NC}"
+echo -e "${WHITE}   All Setup Complete!${NC}"
+echo -e "${GREEN}========================================${NC}"
+
+echo -e "\n  ${CYAN}Progress: ${WHITE}8/8${NC} (100%)"
+echo -e "  ${CYAN}────────────────────────────────${NC}"
+
+echo -e "\n${GREEN}Final Installed List:${NC}"
+for app in "${INSTALLED_APPS[@]}"; do
+    echo -e "  ${GREEN}✓${NC} $app"
+done
+
+if [ ${#SKIPPED_APPS[@]} -gt 0 ]; then
+    echo -e "\n${GRAY}Skipped:${NC}"
+    for app in "${SKIPPED_APPS[@]}"; do
+        echo -e "  ${GRAY}○${NC} $app"
+    done
+fi
+
+echo -e "\n${YELLOW}Restart your terminal for all changes to take effect.${NC}"
 echo ""
