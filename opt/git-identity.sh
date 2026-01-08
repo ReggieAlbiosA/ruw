@@ -46,7 +46,7 @@ check_git() {
     fi
 }
 
-# Check for existing identities file
+# Check for existing identities file - FIXED VERSION
 check_existing_identities() {
     echo -e "\n${NC}[2/5] Checking existing identities...${NC}"
 
@@ -60,23 +60,31 @@ check_existing_identities() {
             echo -e "    $num) $label ($email)"
         done < "$IDENTITIES_FILE"
         echo ""
-        read -p "  > Keep existing identities? (y = keep, n = reconfigure): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo -e "  ${GREEN}+ Keeping existing identities${NC}"
-            return 1  # Skip collection
-        else
-            echo -e "  ${YELLOW}> Will reconfigure identities${NC}"
-            rm -f "$IDENTITIES_FILE"
-            return 0  # Proceed with collection
-        fi
+        
+        while true; do
+            read -p "  > Keep existing identities? (y = keep, n = reconfigure): " -r REPLY
+            case "${REPLY,,}" in
+                y|yes)
+                    echo -e "  ${GREEN}+ Keeping existing identities${NC}"
+                    return 1  # Skip collection
+                    ;;
+                n|no)
+                    echo -e "  ${YELLOW}> Will reconfigure identities${NC}"
+                    rm -f "$IDENTITIES_FILE"
+                    return 0  # Proceed with collection
+                    ;;
+                *)
+                    echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+                    ;;
+            esac
+        done
     else
         echo -e "  ${GRAY}i No existing identities found${NC}"
         return 0  # Proceed with collection
     fi
 }
 
-# Collect identities from user
+# Collect identities from user - FIXED VERSION
 collect_identities() {
     echo -e "\n${NC}[3/5] Collecting Git identities...${NC}"
     echo -e "  ${GRAY}i You can add multiple identities (Work, Personal, Client, etc.)${NC}"
@@ -124,13 +132,27 @@ collect_identities() {
         echo -e "  ${GREEN}+ Added: $label ($email)${NC}"
         echo ""
 
-        # Ask for more
-        read -p "  > Add another identity? (a = add more, x = done): " -n 1 -r
-        echo
-
-        if [[ $REPLY =~ ^[Xx]$ ]]; then
+        # Ask for more - FIXED VERSION
+        while true; do
+            read -p "  > Add another identity? (a = add more, x = done): " -r REPLY
+            case "${REPLY,,}" in
+                a)
+                    break 2  # Break both while loops to add another
+                    ;;
+                x)
+                    break 2  # Break to exit main loop
+                    ;;
+                *)
+                    echo -e "    ${RED}! Invalid input. Please enter 'a' or 'x'${NC}"
+                    ;;
+            esac
+        done
+        
+        # If we get here via 'x', break the outer loop
+        if [[ ${REPLY,,} == "x" ]]; then
             break
         fi
+        
         echo ""
     done
 
@@ -214,7 +236,7 @@ add_identity() {
 
     # Get full name
     local name=""
-    while [ -z "$name" ]; do
+    while [ -z "$name" ]; then
         read -p "Enter full name for commits: " name < /dev/tty
         if [ -z "$name" ]; then
             echo "Name cannot be empty"
