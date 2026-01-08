@@ -27,33 +27,39 @@ command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Helper function to prompt user
+# Helper function to prompt user - FIXED VERSION
 prompt_install() {
     while true; do
-        read -p "  > Install $1? (y/n) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            return 0
-        elif [[ $REPLY =~ ^[Nn]$ ]]; then
-            return 1
-        else
-            echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
-        fi
+        read -p "  > Install $1? (y/n): " -r REPLY
+        case "${REPLY,,}" in  # Convert to lowercase
+            y|yes)
+                return 0
+                ;;
+            n|no)
+                return 1
+                ;;
+            *)
+                echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+                ;;
+        esac
     done
 }
 
-# Helper function to prompt for reconfiguration
+# Helper function to prompt for reconfiguration - FIXED VERSION
 prompt_reconfigure() {
     while true; do
-        read -p "  > $1 failed to connect. Reconfigure? (y/n) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            return 0
-        elif [[ $REPLY =~ ^[Nn]$ ]]; then
-            return 1
-        else
-            echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
-        fi
+        read -p "  > $1 failed to connect. Reconfigure? (y/n): " -r REPLY
+        case "${REPLY,,}" in
+            y|yes)
+                return 0
+                ;;
+            n|no)
+                return 1
+                ;;
+            *)
+                echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+                ;;
+        esac
     done
 }
 
@@ -229,19 +235,22 @@ add_mcp_servers() {
         return 0
     fi
 
-    # Ask once if user wants to configure missing MCPs
+    # Ask once if user wants to configure missing MCPs - FIXED VERSION
     echo ""
     while true; do
-        read -p "  > Configure ${#missing_mcps[@]} missing MCP(s)? (y/n) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            break
-        elif [[ $REPLY =~ ^[Nn]$ ]]; then
-            echo -e "  ${GRAY}> Skipped MCP configuration${NC}"
-            return 0
-        else
-            echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
-        fi
+        read -p "  > Configure ${#missing_mcps[@]} missing MCP(s)? (y/n): " -r REPLY
+        case "${REPLY,,}" in
+            y|yes)
+                break
+                ;;
+            n|no)
+                echo -e "  ${GRAY}> Skipped MCP configuration${NC}"
+                return 0
+                ;;
+            *)
+                echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+                ;;
+        esac
     done
 
     # Install only missing MCPs
@@ -317,7 +326,7 @@ reinstall_missing_mcps() {
     done
 }
 
-# Verify and offer to fix missing MCPs
+# Verify and offer to fix missing MCPs - FIXED VERSION
 verify_mcp_installation() {
     echo -e "\n${CYAN}> Verifying MCP installations...${NC}"
 
@@ -353,17 +362,20 @@ verify_mcp_installation() {
     # Offer to reinstall missing MCPs
     echo -e "\n${YELLOW}${#missing_mcps[@]} MCP server(s) not connected.${NC}"
     while true; do
-        read -p "  > Would you like to reconfigure missing MCPs? (y/n) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            reinstall_missing_mcps "${missing_mcps[@]}"
-            return 0
-        elif [[ $REPLY =~ ^[Nn]$ ]]; then
-            echo -e "  ${GRAY}> Skipped reconfiguration${NC}"
-            return 0
-        else
-            echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
-        fi
+        read -p "  > Would you like to reconfigure missing MCPs? (y/n): " -r REPLY
+        case "${REPLY,,}" in
+            y|yes)
+                reinstall_missing_mcps "${missing_mcps[@]}"
+                return 0
+                ;;
+            n|no)
+                echo -e "  ${GRAY}> Skipped reconfiguration${NC}"
+                return 0
+                ;;
+            *)
+                echo -e "  ${RED}! Invalid input. Please enter 'y' or 'n'${NC}"
+                ;;
+        esac
     done
 }
 
