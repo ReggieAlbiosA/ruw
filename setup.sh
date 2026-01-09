@@ -178,9 +178,9 @@ check_mcp_configuration() {
         echo -e "  ${YELLOW}○ $mcp - Not configured${NC}"
     done
 
-    # Return count of missing MCPs (stored in global for caller to use)
+    # Store count of missing MCPs in global variable for caller to use
     MISSING_MCP_COUNT=${#missing_mcps[@]}
-    return ${#missing_mcps[@]}
+    return 0
 }
 
 # ============================================
