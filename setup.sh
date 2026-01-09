@@ -243,40 +243,49 @@ update_progress
 # [2/7] Development Apps (VS Code, Cursor, Antigravity)
 # ============================================
 echo -e "\n${WHITE}[2/7] Development Apps${NC}"
-echo -e "  ${GRAY}(Individual prompts for each app)${NC}"
+echo -e "  ${GRAY}(VS Code, Cursor, Antigravity)${NC}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
-APPS_SCRIPT="$SCRIPT_DIR/def/apps.sh"
+if prompt_optional "Install development apps"; then
+    echo -e "  ${CYAN}> Running apps installation...${NC}"
+    show_realtime_header
 
-APPS_FLAGS=""
-[ "$AUTO_YES" = true ] && APPS_FLAGS="$APPS_FLAGS -y"
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+    APPS_SCRIPT="$SCRIPT_DIR/def/apps.sh"
 
-if [ -f "$APPS_SCRIPT" ]; then
-    bash "$APPS_SCRIPT" $APPS_FLAGS || {
-        echo -e "${RED}Apps installation encountered errors. Continuing...${NC}"
-    }
-else
-    APPS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/apps.sh"
-    echo "Downloading apps.sh..."
-    if curl -fsSL "$APPS_URL" -o /tmp/apps.sh; then
-        bash /tmp/apps.sh $APPS_FLAGS || {
+    APPS_FLAGS=""
+    [ "$AUTO_YES" = true ] && APPS_FLAGS="$APPS_FLAGS -y"
+
+    if [ -f "$APPS_SCRIPT" ]; then
+        bash "$APPS_SCRIPT" $APPS_FLAGS || {
             echo -e "${RED}Apps installation encountered errors. Continuing...${NC}"
         }
-        rm -f /tmp/apps.sh
     else
-        echo -e "${RED}Failed to download apps.sh. Skipping apps installation.${NC}"
+        APPS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/apps.sh"
+        echo "Downloading apps.sh..."
+        if curl -fsSL "$APPS_URL" -o /tmp/apps.sh; then
+            bash /tmp/apps.sh $APPS_FLAGS || {
+                echo -e "${RED}Apps installation encountered errors. Continuing...${NC}"
+            }
+            rm -f /tmp/apps.sh
+        else
+            echo -e "${RED}Failed to download apps.sh. Skipping apps installation.${NC}"
+        fi
     fi
-fi
 
-# Log results for summary
-if command_exists code; then
-    log_installed "VS Code v$(code --version 2>/dev/null | head -1)"
-fi
-if command_exists cursor; then
-    log_installed "Cursor"
-fi
-if command_exists antigravity; then
-    log_installed "Antigravity"
+    show_realtime_footer
+
+    # Log results for summary
+    if command_exists code; then
+        log_installed "VS Code v$(code --version 2>/dev/null | head -1)"
+    fi
+    if command_exists cursor; then
+        log_installed "Cursor"
+    fi
+    if command_exists antigravity; then
+        log_installed "Antigravity"
+    fi
+else
+    log_skipped "Development Apps"
 fi
 
 update_progress
