@@ -34,23 +34,64 @@ curl -fsSL .../setup.sh | bash -s -- --skip-optional
 ## What It Does
 
 **Auto-installed (no prompts):**
-- Core dev tools: Node.js, Git, pnpm, VS Code, Cursor, Antigravity
+- Core packages: Node.js, Git, pnpm
 - Workspace launcher (Desktop + autostart)
-- Bash aliases (git shortcuts, common commands)
 
-**Optional (prompts y/n):**
+**Prompted installations:**
+- Development apps: VS Code, Cursor, Antigravity (individual prompts)
+
+**Optional modules (prompted):**
+- Modern CLI tools (fzf, ripgrep, fd, bat, eza, zoxide)
 - Claude Code CLI with MCP servers
 - Git Identity Manager (multi-identity commits)
+- Bash aliases (git shortcuts, common commands)
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `setup.sh` | Main installer - runs all setup steps |
-| `logon-launch-workspace.sh` | Sets up autostart for login automation |
-| `launch-workspace.sh` | Workspace launcher (browser tabs + apps) |
-| `claude-code-setup.sh` | Claude Code CLI + MCP server setup |
-| `git-identity-setup.sh` | Git multi-identity manager |
+| `setup.sh` | Main installer - orchestrates all modules |
+| `def/packages.sh` | Core packages (Node.js, Git, pnpm) |
+| `def/apps.sh` | Development apps (VS Code, Cursor, Antigravity) |
+| `def/logon-launch-workspace.sh` | Autostart workspace launcher |
+| `opt/claude-code.sh` | Claude Code CLI + MCP servers |
+| `opt/cli-tools.sh` | Modern CLI tools (fzf, ripgrep, etc) |
+| `opt/git-identity.sh` | Git multi-identity manager |
+| `opt/aliases.sh` | Bash aliases and shortcuts |
+| `launch-workspace.sh` | Workspace launcher script |
+
+## Standalone Module Usage
+
+Install only core packages:
+```bash
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/packages.sh | bash
+```
+
+Install only development apps:
+```bash
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/apps.sh | bash -s -- -y
+```
+
+Skip specific apps:
+```bash
+./def/apps.sh -y --skip-cursor --skip-antigravity  # Only install VS Code
+```
+
+### Module Options
+
+**def/packages.sh:**
+- `-y, --yes` - Auto-accept (no-op, always auto-installs)
+- `--reinstall` - Force reinstall existing packages
+- `--skip-nodejs` - Skip Node.js installation
+- `--skip-git` - Skip Git installation
+- `--skip-pnpm` - Skip pnpm installation
+
+**def/apps.sh:**
+- `-y, --yes` - Auto-accept all prompts
+- `--reinstall` - Force reinstall existing apps
+- `--skip-vscode` - Skip VS Code installation
+- `--skip-cursor` - Skip Cursor installation
+- `--skip-antigravity` - Skip Antigravity installation
 
 ## Customize
 

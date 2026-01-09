@@ -107,7 +107,7 @@ prompt_optional() {
 }
 
 # Track installation progress
-TOTAL_STEPS=9
+TOTAL_STEPS=7
 CURRENT_STEP=0
 INSTALLED_APPS=()
 SKIPPED_APPS=()
@@ -201,185 +201,90 @@ fi
 echo -e "\n${CYAN}You will be prompted for each installation.${NC}"
 
 # ============================================
-# [1/8] Node.js
+# [1/7] Core Packages (Node.js, Git, pnpm)
 # ============================================
-echo -e "\n${WHITE}[1/8] Node.js${NC}"
+echo -e "\n${WHITE}[1/7] Core Packages${NC}"
+echo -e "  ${GRAY}(Node.js, Git, pnpm - auto-install)${NC}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+PACKAGES_SCRIPT="$SCRIPT_DIR/def/packages.sh"
+
+if [ -f "$PACKAGES_SCRIPT" ]; then
+    bash "$PACKAGES_SCRIPT" || {
+        echo -e "${RED}Packages installation encountered errors. Continuing...${NC}"
+    }
+else
+    PACKAGES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/packages.sh"
+    echo "Downloading packages.sh..."
+    if curl -fsSL "$PACKAGES_URL" -o /tmp/packages.sh; then
+        bash /tmp/packages.sh || {
+            echo -e "${RED}Packages installation encountered errors. Continuing...${NC}"
+        }
+        rm -f /tmp/packages.sh
+    else
+        echo -e "${RED}Failed to download packages.sh. Skipping packages installation.${NC}"
+    fi
+fi
+
+# Log results for summary
 if command_exists node; then
-    echo -e "  ${GREEN}✓ Already installed: $(node --version)${NC}"
     log_installed "Node.js $(node --version)"
-else
-    echo -e "  ${YELLOW}○ Not installed${NC}"
-    if prompt_install "Node.js"; then
-        echo -e "  ${CYAN}> Installing Node.js (realtime output)...${NC}"
-        show_realtime_header
-        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-        sudo apt-get install -y nodejs
-        show_realtime_footer
-        if command_exists node; then
-            echo -e "  ${GREEN}✓ Installed: $(node --version)${NC}"
-            log_installed "Node.js $(node --version)"
-        else
-            echo -e "  ${RED}✗ Installation failed${NC}"
-        fi
-    else
-        log_skipped "Node.js"
-    fi
 fi
-update_progress
-
-# ============================================
-# [2/8] Git
-# ============================================
-echo -e "\n${WHITE}[2/8] Git${NC}"
 if command_exists git; then
-    echo -e "  ${GREEN}✓ Already installed: $(git --version)${NC}"
     log_installed "Git $(git --version | cut -d' ' -f3)"
-else
-    echo -e "  ${YELLOW}○ Not installed${NC}"
-    if prompt_install "Git"; then
-        echo -e "  ${CYAN}> Installing Git (realtime output)...${NC}"
-        show_realtime_header
-        sudo apt-get update
-        sudo apt-get install -y git
-        show_realtime_footer
-        if command_exists git; then
-            echo -e "  ${GREEN}✓ Installed: $(git --version)${NC}"
-            log_installed "Git $(git --version | cut -d' ' -f3)"
-        else
-            echo -e "  ${RED}✗ Installation failed${NC}"
-        fi
-    else
-        log_skipped "Git"
-    fi
 fi
-update_progress
-
-# ============================================
-# [3/8] pnpm
-# ============================================
-echo -e "\n${WHITE}[3/8] pnpm${NC}"
 if command_exists pnpm; then
-    echo -e "  ${GREEN}✓ Already installed: v$(pnpm --version)${NC}"
     log_installed "pnpm v$(pnpm --version)"
-else
-    echo -e "  ${YELLOW}○ Not installed${NC}"
-    if prompt_install "pnpm"; then
-        echo -e "  ${CYAN}> Installing pnpm (realtime output)...${NC}"
-        show_realtime_header
-        curl -fsSL https://get.pnpm.io/install.sh | sh -
-        export PNPM_HOME="$HOME/.local/share/pnpm"
-        export PATH="$PNPM_HOME:$PATH"
-        show_realtime_footer
-        if command_exists pnpm; then
-            echo -e "  ${GREEN}✓ Installed: v$(pnpm --version)${NC}"
-            log_installed "pnpm v$(pnpm --version)"
-        else
-            echo -e "  ${YELLOW}! Installed (restart terminal to use)${NC}"
-            log_installed "pnpm (restart needed)"
-        fi
-    else
-        log_skipped "pnpm"
-    fi
 fi
+
 update_progress
 
 # ============================================
-# [4/8] VS Code
+# [2/7] Development Apps (VS Code, Cursor, Antigravity)
 # ============================================
-echo -e "\n${WHITE}[4/8] VS Code${NC}"
+echo -e "\n${WHITE}[2/7] Development Apps${NC}"
+echo -e "  ${GRAY}(Individual prompts for each app)${NC}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+APPS_SCRIPT="$SCRIPT_DIR/def/apps.sh"
+
+APPS_FLAGS=""
+[ "$AUTO_YES" = true ] && APPS_FLAGS="$APPS_FLAGS -y"
+
+if [ -f "$APPS_SCRIPT" ]; then
+    bash "$APPS_SCRIPT" $APPS_FLAGS || {
+        echo -e "${RED}Apps installation encountered errors. Continuing...${NC}"
+    }
+else
+    APPS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/apps.sh"
+    echo "Downloading apps.sh..."
+    if curl -fsSL "$APPS_URL" -o /tmp/apps.sh; then
+        bash /tmp/apps.sh $APPS_FLAGS || {
+            echo -e "${RED}Apps installation encountered errors. Continuing...${NC}"
+        }
+        rm -f /tmp/apps.sh
+    else
+        echo -e "${RED}Failed to download apps.sh. Skipping apps installation.${NC}"
+    fi
+fi
+
+# Log results for summary
 if command_exists code; then
-    echo -e "  ${GREEN}✓ Already installed: v$(code --version 2>/dev/null | head -1)${NC}"
     log_installed "VS Code v$(code --version 2>/dev/null | head -1)"
-else
-    echo -e "  ${YELLOW}○ Not installed${NC}"
-    if prompt_install "VS Code"; then
-        echo -e "  ${CYAN}> Installing VS Code via snap (realtime output)...${NC}"
-        show_realtime_header
-        sudo snap install code --classic
-        show_realtime_footer
-        if command_exists code; then
-            echo -e "  ${GREEN}✓ Installed: v$(code --version 2>/dev/null | head -1)${NC}"
-            log_installed "VS Code v$(code --version 2>/dev/null | head -1)"
-        else
-            echo -e "  ${YELLOW}! Installed (restart terminal to use)${NC}"
-            log_installed "VS Code (restart needed)"
-        fi
-    else
-        log_skipped "VS Code"
-    fi
 fi
-update_progress
-
-# ============================================
-# [5/8] Cursor
-# ============================================
-echo -e "\n${WHITE}[5/8] Cursor${NC}"
 if command_exists cursor; then
-    echo -e "  ${GREEN}✓ Already installed${NC}"
     log_installed "Cursor"
-else
-    echo -e "  ${YELLOW}○ Not installed${NC}"
-    if prompt_install "Cursor"; then
-        echo -e "  ${CYAN}> Downloading Cursor AppImage (realtime output)...${NC}"
-        show_realtime_header
-        CURSOR_DIR="$HOME/.local/bin"
-        mkdir -p "$CURSOR_DIR"
-        echo "Downloading from https://downloader.cursor.sh/linux/appImage/x64..."
-        curl -fSL "https://downloader.cursor.sh/linux/appImage/x64" -o "$CURSOR_DIR/cursor.AppImage" --progress-bar
-        chmod +x "$CURSOR_DIR/cursor.AppImage"
-        ln -sf "$CURSOR_DIR/cursor.AppImage" "$CURSOR_DIR/cursor"
-        export PATH="$CURSOR_DIR:$PATH"
-        echo "Downloaded to $CURSOR_DIR/cursor.AppImage"
-        show_realtime_footer
-        if [ -f "$CURSOR_DIR/cursor.AppImage" ]; then
-            echo -e "  ${GREEN}✓ Installed to ~/.local/bin${NC}"
-            log_installed "Cursor"
-        else
-            echo -e "  ${RED}✗ Installation failed${NC}"
-        fi
-    else
-        log_skipped "Cursor"
-    fi
 fi
-update_progress
-
-# ============================================
-# [6/8] Google Antigravity
-# ============================================
-echo -e "\n${WHITE}[6/8] Google Antigravity${NC}"
 if command_exists antigravity; then
-    echo -e "  ${GREEN}✓ Already installed${NC}"
     log_installed "Antigravity"
-else
-    echo -e "  ${YELLOW}○ Not installed${NC}"
-    if prompt_install "Google Antigravity"; then
-        echo -e "  ${CYAN}> Downloading Antigravity AppImage (realtime output)...${NC}"
-        show_realtime_header
-        ANTIGRAVITY_DIR="$HOME/.local/bin"
-        mkdir -p "$ANTIGRAVITY_DIR"
-        echo "Downloading from https://antigravity.codes/download/linux..."
-        curl -fSL "https://antigravity.codes/download/linux" -o "$ANTIGRAVITY_DIR/antigravity.AppImage" --progress-bar
-        chmod +x "$ANTIGRAVITY_DIR/antigravity.AppImage"
-        ln -sf "$ANTIGRAVITY_DIR/antigravity.AppImage" "$ANTIGRAVITY_DIR/antigravity"
-        export PATH="$ANTIGRAVITY_DIR:$PATH"
-        echo "Downloaded to $ANTIGRAVITY_DIR/antigravity.AppImage"
-        show_realtime_footer
-        if [ -f "$ANTIGRAVITY_DIR/antigravity.AppImage" ]; then
-            echo -e "  ${GREEN}✓ Installed to ~/.local/bin${NC}"
-            log_installed "Antigravity"
-        else
-            echo -e "  ${RED}✗ Installation failed${NC}"
-        fi
-    else
-        log_skipped "Antigravity"
-    fi
 fi
+
 update_progress
 
 # ============================================
-# [7/8] Workspace Launcher (auto-install, no prompt)
+# [3/7] Workspace Launcher (auto-install, no prompt)
 # ============================================
-echo -e "\n${WHITE}[7/8] Workspace Launcher${NC}"
+echo -e "\n${WHITE}[3/7] Workspace Launcher${NC}"
 echo -e "  ${CYAN}> Configuring workspace automation...${NC}"
 {
     show_realtime_header
@@ -425,7 +330,7 @@ if [ ${#SKIPPED_APPS[@]} -gt 0 ]; then
 fi
 
 # ============================================
-# [8/8] Optional Modules
+# [4/7] Optional Modules
 # ============================================
 if [ "$SKIP_OPTIONAL" = true ]; then
     echo -e "\n${GRAY}Optional modules skipped (--skip-optional)${NC}"
@@ -500,7 +405,7 @@ else
         fi
     fi
 
-    echo -e "\n  ${CYAN}Progress: ${WHITE}7.33/9${NC} (81%)"
+    echo -e "\n  ${CYAN}Progress: ${WHITE}4/7${NC} (57%)"
     echo -e "  ${CYAN}────────────────────────────────${NC}"
 
     # --- Modern CLI Tools ---
@@ -546,7 +451,7 @@ else
         fi
     fi
 
-    echo -e "\n  ${CYAN}Progress: ${WHITE}7.66/9${NC} (85%)"
+    echo -e "\n  ${CYAN}Progress: ${WHITE}5/7${NC} (71%)"
     echo -e "  ${CYAN}────────────────────────────────${NC}"
 
     # --- Git Identity Manager ---
@@ -582,7 +487,7 @@ else
         fi
     fi
 
-    echo -e "\n  ${CYAN}Progress: ${WHITE}8/9${NC} (89%)"
+    echo -e "\n  ${CYAN}Progress: ${WHITE}6/7${NC} (86%)"
     echo -e "  ${CYAN}────────────────────────────────${NC}"
 
     # --- Bash Aliases ---
@@ -628,7 +533,7 @@ echo -e "\n${GREEN}========================================${NC}"
 echo -e "${WHITE}   All Setup Complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 
-echo -e "\n  ${CYAN}Progress: ${WHITE}9/9${NC} (100%)"
+echo -e "\n  ${CYAN}Progress: ${WHITE}7/7${NC} (100%)"
 echo -e "  ${CYAN}────────────────────────────────${NC}"
 
 echo -e "\n${GREEN}Final Installed List:${NC}"
