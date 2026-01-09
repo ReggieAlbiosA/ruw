@@ -4,8 +4,16 @@ Automated Ubuntu workspace setup - opens browser tabs and apps on login.
 
 ## Install
 
+**Recommended (auto-accept all prompts):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash -s -- -y
+```
+
+**Or download and run interactively:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh -o setup.sh
+chmod +x setup.sh
+./setup.sh
 ```
 
 ### Install Overrides

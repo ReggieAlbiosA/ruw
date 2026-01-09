@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup.sh
-# Run with: curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash
+# Run with: curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash -s -- -y
 #
 # Install overrides:
 #   -y, --yes           Auto-accept all prompts
@@ -41,6 +41,23 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Check if running in non-interactive mode (piped from curl)
+if [ ! -t 0 ] && [ "$AUTO_YES" != true ]; then
+    echo ""
+    echo "ERROR: This script requires interactive input or the -y flag."
+    echo ""
+    echo "Please run with one of these methods:"
+    echo "  1. Auto-accept all prompts:"
+    echo "     curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash -s -- -y"
+    echo ""
+    echo "  2. Download and run:"
+    echo "     curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh -o setup.sh"
+    echo "     chmod +x setup.sh"
+    echo "     ./setup.sh"
+    echo ""
+    exit 1
+fi
 
 # ============================================
 # Helper Functions
