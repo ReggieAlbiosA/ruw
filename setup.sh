@@ -504,6 +504,23 @@ else
     echo -e "  ${GRAY}(git shortcuts, navigation, safety aliases)${NC}"
     if grep -q "REGGIE-WORKSPACE-ALIASES" "$HOME/.bashrc" 2>/dev/null; then
         echo -e "  ${GREEN}✓ Already configured${NC}"
+        echo -e "  ${CYAN}> Checking for updates...${NC}"
+        show_realtime_header
+
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+        ALIASES_SCRIPT="$SCRIPT_DIR/opt/aliases.sh"
+
+        if [ -f "$ALIASES_SCRIPT" ]; then
+            bash "$ALIASES_SCRIPT"
+        else
+            ALIASES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/aliases.sh"
+            echo "Downloading aliases.sh..."
+            curl -fsSL "$ALIASES_URL" -o /tmp/aliases.sh
+            bash /tmp/aliases.sh
+            rm -f /tmp/aliases.sh
+        fi
+
+        show_realtime_footer
         log_installed "Bash Aliases"
     else
         echo -e "  ${YELLOW}○ Not configured${NC}"
@@ -533,6 +550,40 @@ else
     fi
 
     update_progress
+fi
+
+# ============================================
+# [Optional 5/4] ruw CLI Tool
+# ============================================
+if [ "$SKIP_OPTIONAL" != true ]; then
+    echo -e "\n${MAGENTA}[Optional 5/4] ruw CLI Tool${NC}"
+    echo -e "  ${GRAY}(Manage workspace from anywhere with 'ruw' command)${NC}"
+
+    if command_exists ruw; then
+        echo -e "  ${GREEN}✓ Already installed${NC}"
+        log_installed "ruw CLI Tool"
+    else
+        echo -e "  ${YELLOW}○ Not installed${NC}"
+        if prompt_optional "ruw CLI Tool"; then
+            echo -e "  ${CYAN}> Running ruw installation (realtime output)...${NC}"
+            show_realtime_header
+
+            SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+            RUW_INSTALL_SCRIPT="$SCRIPT_DIR/bin/install-ruw.sh"
+
+            if [ -f "$RUW_INSTALL_SCRIPT" ]; then
+                bash "$RUW_INSTALL_SCRIPT"
+            else
+                echo -e "${RED}Error: bin/install-ruw.sh not found${NC}"
+            fi
+
+            show_realtime_footer
+            echo -e "  ${GREEN}✓ ruw CLI Tool setup complete${NC}"
+            log_installed "ruw CLI Tool"
+        else
+            log_skipped "ruw CLI Tool"
+        fi
+    fi
 fi
 
 # ============================================

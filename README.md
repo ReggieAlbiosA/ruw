@@ -51,6 +51,8 @@ curl -fsSL .../setup.sh | bash -s -- --skip-optional
 | Script | Purpose |
 |--------|---------|
 | `setup.sh` | Main installer - orchestrates all modules |
+| `bin/ruw` | CLI tool for workspace management |
+| `bin/install-ruw.sh` | Install ruw CLI tool |
 | `def/packages.sh` | Core packages (Node.js, Git, pnpm) |
 | `def/apps.sh` | Development apps (VS Code, Cursor, Antigravity) |
 | `def/logon-launch-workspace.sh` | Autostart workspace launcher |
@@ -75,6 +77,49 @@ curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspa
 Skip specific apps:
 ```bash
 ./def/apps.sh -y --skip-cursor --skip-antigravity  # Only install VS Code
+```
+
+## ruw CLI Tool
+
+Manage your workspace from anywhere with the `ruw` command.
+
+### Installation
+
+Install via setup.sh (recommended):
+```bash
+./setup.sh  # Select "yes" when prompted for ruw CLI Tool
+```
+
+Or install manually:
+```bash
+bash bin/install-ruw.sh
+```
+
+### Usage
+
+Update workspace from anywhere:
+```bash
+ruw --local-update              # Interactive update
+ruw --local-update -y           # Auto-accept all prompts
+ruw --local-update --skip-optional    # Update core only
+```
+
+Show help:
+```bash
+ruw --help
+```
+
+Show version:
+```bash
+ruw --version
+```
+
+### Uninstall
+
+```bash
+rm ~/.local/bin/ruw
+rm -rf ~/.config/ruw
+# Remove from ~/.bashrc: export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ### Module Options

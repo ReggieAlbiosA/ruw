@@ -81,14 +81,16 @@ alias folders='nautilus &'
 alias t='tldr'
 alias cat='batcat'
 alias m='micro'
-alias ls='exa'
+alias ls='eza -a'
+alias ll='eza -la'
+alias llt='eza -l -a --total-size'
 alias sleep='systemctl suspend'
 alias reboot='systemctl reboot'
 alias poff='systemctl poweroff'
 alias ubash='source ~/.bashrc'
 alias sbash='source /etc/bash.bashrc'
 alias dockerlun='nohup /opt/docker-desktop/bin/docker-desktop >/dev/null 2>&1 & >/dev/null 2>&1 &'
-
+alias ft='file  --mime-type *'
 
 
 
@@ -96,7 +98,7 @@ alias dockerlun='nohup /opt/docker-desktop/bin/docker-desktop >/dev/null 2>&1 & 
 # ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
-alias l='ls -CF'
+alias l='ls -cF'
 # Common commands
 alias cls='clear'
 alias md='mkdir -p'
