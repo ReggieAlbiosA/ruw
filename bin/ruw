@@ -2,7 +2,7 @@
 # ruw - Reggie Ubuntu Workspace CLI
 # Manage workspace setup from anywhere
 
-set -e
+set -eo pipefail
 
 # ============================================
 # Colors
@@ -84,10 +84,12 @@ get_changed_files() {
     fi
 
     # B. Uncommitted changes (staged + unstaged + untracked)
-    local uncommitted=$(git status --porcelain 2>/dev/null | awk '{print $2}')
+    # Use sed to strip the first 3 characters (status codes) from porcelain output
+    local uncommitted=$(git status --porcelain 2>/dev/null | sed 's/^...//')
 
     # Merge and deduplicate, filter to setup-related files
-    echo -e "$changed_files\n$uncommitted" | grep -E "^(setup\.sh|def/|opt/|bin/)" | sort -u | grep -v "^$"
+    # Use printf instead of echo -e for better portability
+    printf "%s\n%s\n" "$changed_files" "$uncommitted" | grep -E "^(setup\.sh|def/|opt/|bin/)" | sort -u | grep -v "^$"
 }
 
 # Apply a single changed file
@@ -95,29 +97,37 @@ apply_change() {
     local file="$1"
     local workspace="$2"
 
+    # Verify file exists
+    if [ ! -f "$workspace/$file" ]; then
+        echo -e "  ${RED}✗${NC} File not found: $file"
+        return 1
+    fi
+
     case "$file" in
         setup.sh)
             echo -e "  ${CYAN}→${NC} Running full setup.sh"
             bash "$workspace/setup.sh" "${SETUP_FLAGS[@]}"
             ;;
-        def/*.sh)
+        def/*.sh|opt/*.sh)
             echo -e "  ${CYAN}→${NC} Running $file"
             bash "$workspace/$file"
-            ;;
-        opt/*.sh)
-            echo -e "  ${CYAN}→${NC} Running $file"
-            bash "$workspace/$file"
-            ;;
-        bin/ruw)
-            echo -e "  ${CYAN}→${NC} Updating $file"
-            cp "$workspace/$file" "$HOME/.local/bin/ruw"
-            chmod +x "$HOME/.local/bin/ruw"
             ;;
         bin/*)
-            echo -e "  ${CYAN}→${NC} Updating $file"
-            local filename=$(basename "$file")
-            cp "$workspace/$file" "$HOME/.local/bin/$filename"
-            chmod +x "$HOME/.local/bin/$filename"
+            local filename
+            filename=$(basename "$file")
+            local target="$HOME/.local/bin/$filename"
+
+            # Check if target is already a symlink to the source (skip copy)
+            if [ -L "$target" ] && [ "$(readlink -f "$target")" = "$(readlink -f "$workspace/$file")" ]; then
+                echo -e "  ${GREEN}✓${NC} $filename already linked"
+            else
+                echo -e "  ${CYAN}→${NC} Installing $filename"
+                mkdir -p "$HOME/.local/bin"
+                # Remove existing symlink/file before copying
+                rm -f "$target"
+                cp "$workspace/$file" "$target"
+                chmod +x "$target"
+            fi
             ;;
     esac
 }
@@ -131,17 +141,23 @@ save_last_applied() {
     # Only save if working tree is clean
     if [ -z "$(git status --porcelain 2>/dev/null)" ]; then
         git rev-parse HEAD > "$LAST_APPLIED_FILE"
-        echo -e "${GRAY}Saved last-applied: $(cat $LAST_APPLIED_FILE | cut -c1-7)${NC}"
+        echo -e "${GRAY}Saved last-applied: $(cut -c1-7 < "$LAST_APPLIED_FILE")${NC}"
     else
         echo -e "${GRAY}Uncommitted changes present - not updating last-applied SHA${NC}"
     fi
 }
 
-# Get all setup-related scripts for --force mode
+# Get all setup-related files for --force mode
 get_all_scripts() {
     local workspace="$1"
+    # Include setup.sh
+    echo "setup.sh"
+    # Include all def/ scripts
     find "$workspace/def" -name "*.sh" 2>/dev/null | sed "s|$workspace/||"
+    # Include all opt/ scripts
     find "$workspace/opt" -name "*.sh" 2>/dev/null | sed "s|$workspace/||"
+    # Include all bin/ files (excluding .sh install scripts)
+    find "$workspace/bin" -type f ! -name "*.sh" 2>/dev/null | sed "s|$workspace/||"
 }
 
 # ============================================
@@ -274,12 +290,15 @@ do_remote_update() {
     echo -e "${GREEN}Found workspace: $workspace_path${NC}"
     cd "$workspace_path"
 
+    # Track if we stash changes
+    local stashed=false
+
     # Check for uncommitted changes
-    local dirty=$(git status --porcelain 2>/dev/null)
-    if [ -n "$dirty" ]; then
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
         if [ "$FORCE" = true ]; then
             echo -e "${YELLOW}Stashing local changes...${NC}"
             git stash push -m "ruw-remote-update-autostash"
+            stashed=true
         else
             echo -e "${RED}Error: You have uncommitted changes${NC}"
             echo -e "${GRAY}Commit or stash them first, or use --force to auto-stash${NC}"
@@ -310,9 +329,9 @@ do_remote_update() {
         echo -e "${GREEN}Already up to date with remote.${NC}"
 
         # Unstash if we stashed earlier
-        if [ "$FORCE" = true ] && [ -n "$dirty" ]; then
+        if [ "$stashed" = true ]; then
             echo -e "${CYAN}Restoring stashed changes...${NC}"
-            git stash pop
+            git stash pop || echo -e "${YELLOW}Warning: Failed to restore stash. Run 'git stash pop' manually.${NC}"
         fi
         return 0
     fi
@@ -335,9 +354,9 @@ do_remote_update() {
         if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
             echo -e "${YELLOW}Cancelled.${NC}"
             # Unstash if we stashed
-            if [ "$FORCE" = true ] && [ -n "$dirty" ]; then
+            if [ "$stashed" = true ]; then
                 echo -e "${CYAN}Restoring stashed changes...${NC}"
-                git stash pop
+                git stash pop || echo -e "${YELLOW}Warning: Failed to restore stash. Run 'git stash pop' manually.${NC}"
             fi
             return 0
         fi
@@ -348,7 +367,15 @@ do_remote_update() {
     # Pull
     echo ""
     echo -e "${CYAN}Pulling from remote...${NC}"
-    git pull origin main 2>/dev/null || git pull origin master 2>/dev/null
+    if ! (git pull origin main 2>/dev/null || git pull origin master 2>/dev/null); then
+        echo -e "${RED}Error: Failed to pull from remote${NC}"
+        # Restore stash if we stashed
+        if [ "$stashed" = true ]; then
+            echo -e "${CYAN}Restoring stashed changes...${NC}"
+            git stash pop || echo -e "${YELLOW}Warning: Failed to restore stash. Run 'git stash pop' manually.${NC}"
+        fi
+        exit 1
+    fi
 
     # Apply changes
     echo ""
@@ -359,10 +386,10 @@ do_remote_update() {
     done <<< "$incoming"
 
     # Unstash if we stashed
-    if [ "$FORCE" = true ] && [ -n "$dirty" ]; then
+    if [ "$stashed" = true ]; then
         echo ""
         echo -e "${CYAN}Restoring stashed changes...${NC}"
-        git stash pop
+        git stash pop || echo -e "${YELLOW}Warning: Failed to restore stash. Run 'git stash pop' manually.${NC}"
     fi
 
     echo ""

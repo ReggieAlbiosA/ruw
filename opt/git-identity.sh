@@ -62,7 +62,7 @@ check_existing_identities() {
         echo ""
         
         while true; do
-            read -p "  > Keep existing identities? (y = keep, n = reconfigure): " -r REPLY
+            read -p "  > Keep existing identities? (y = keep, n = reconfigure): " -r REPLY < /dev/tty
             case "${REPLY,,}" in
                 y|yes)
                     echo -e "  ${GREEN}+ Keeping existing identities${NC}"
@@ -98,7 +98,7 @@ collect_identities() {
         # Get label
         local label=""
         while [ -z "$label" ]; do
-            read -p "  > Enter identity name (e.g., 'Work', 'Personal', 'Client'): " label
+            read -p "  > Enter identity name (e.g., 'Work', 'Personal', 'Client'): " label < /dev/tty
             if [ -z "$label" ]; then
                 echo -e "    ${RED}! Identity name cannot be empty${NC}"
             fi
@@ -107,7 +107,7 @@ collect_identities() {
         # Get full name
         local name=""
         while [ -z "$name" ]; do
-            read -p "  > Enter full name for commits: " name
+            read -p "  > Enter full name for commits: " name < /dev/tty
             if [ -z "$name" ]; then
                 echo -e "    ${RED}! Name cannot be empty${NC}"
             fi
@@ -116,7 +116,7 @@ collect_identities() {
         # Get email
         local email=""
         while true; do
-            read -p "  > Enter email for commits: " email
+            read -p "  > Enter email for commits: " email < /dev/tty
             if [ -z "$email" ]; then
                 echo -e "    ${RED}! Email cannot be empty${NC}"
             elif ! validate_email "$email"; then
@@ -134,7 +134,7 @@ collect_identities() {
 
         # Ask for more - FIXED VERSION
         while true; do
-            read -p "  > Add another identity? (a = add more, x = done): " -r REPLY
+            read -p "  > Add another identity? (a = add more, x = done): " -r REPLY < /dev/tty
             case "${REPLY,,}" in
                 a)
                     break 2  # Break both while loops to add another
@@ -237,7 +237,7 @@ add_identity() {
 
     # Get full name
     local name=""
-    while [ -z "$name" ]; then
+    while [ -z "$name" ]; do
         read -p "Enter full name for commits: " name < /dev/tty
         if [ -z "$name" ]; then
             echo "Name cannot be empty"
