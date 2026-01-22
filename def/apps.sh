@@ -447,6 +447,33 @@ install_chrome() {
     fi
 }
 
+install_docker_engine() {
+    echo -e "  ${CYAN}> Installing Docker Engine (required dependency)...${NC}"
+
+    # Add Docker's official GPG key
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the repository to apt sources
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+
+    # Install Docker Engine packages
+    if sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
+        echo -e "  ${GREEN}✓ Docker Engine installed${NC}"
+        return 0
+    else
+        echo -e "  ${RED}✗ Failed to install Docker Engine${NC}"
+        return 1
+    fi
+}
+
 install_docker_desktop() {
     echo -e "\n${WHITE}[5/5] Docker Desktop${NC}"
 
@@ -456,8 +483,8 @@ install_docker_desktop() {
         return 0
     fi
 
-    # Check if already installed
-    if command_exists docker && [ "$FORCE_REINSTALL" = false ]; then
+    # Check if Docker Desktop is already installed (check for docker-desktop package)
+    if dpkg -l docker-desktop 2>/dev/null | grep -q "^ii" && [ "$FORCE_REINSTALL" = false ]; then
         local version
         version=$(docker --version 2>/dev/null)
         echo -e "  ${GREEN}✓ Already installed: $version${NC}"
@@ -477,6 +504,16 @@ install_docker_desktop() {
     if prompt_install "Docker Desktop"; then
         show_realtime_header
 
+        # Install Docker Engine first (provides docker-ce-cli dependency)
+        if ! command_exists docker; then
+            if ! install_docker_engine; then
+                show_realtime_footer
+                log_failed "Docker Desktop (Docker Engine dependency failed)"
+                return 1
+            fi
+        fi
+
+        # Now install Docker Desktop
         local docker_url="https://desktop.docker.com/linux/main/amd64/docker-desktop-amd64.deb"
         if install_deb "docker-desktop" "$docker_url"; then
             show_realtime_footer
