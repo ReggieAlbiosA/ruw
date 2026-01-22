@@ -18,7 +18,7 @@ SCRIPT_NAME="launch-workspace.sh"
 SCRIPT_DEST="$HOME/Desktop/$SCRIPT_NAME"
 AUTOSTART_DIR="$HOME/.config/autostart"
 DESKTOP_FILE="$AUTOSTART_DIR/reggie-workspace.desktop"
-GITHUB_RAW_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main"
+GITHUB_RAW_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main"
 
 echo -e "\n${CYAN}=== Setting up Workspace Launcher ===${NC}"
 

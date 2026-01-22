@@ -6,12 +6,12 @@ Automated Ubuntu workspace setup - opens browser tabs and apps on login.
 
 **Recommended (auto-accept all prompts):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash -s -- -y
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/setup.sh | bash -s -- -y
 ```
 
 **Or download and run interactively:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/setup.sh -o setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -66,12 +66,12 @@ curl -fsSL .../setup.sh | bash -s -- --skip-optional
 
 Install only core packages:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/packages.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/def/packages.sh | bash
 ```
 
 Install only development apps:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/apps.sh | bash -s -- -y
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/def/apps.sh | bash -s -- -y
 ```
 
 Skip specific apps:
@@ -176,7 +176,7 @@ chmod +x ~/Desktop/launch-workspace.sh
 
 **Re-run autostart setup only:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/logon-launch-workspace.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/logon-launch-workspace.sh | bash
 ```
 
 ## Requirements

@@ -22,7 +22,7 @@ VERSION="1.1.0"
 CONFIG_DIR="$HOME/.config/ruw"
 WORKSPACE_PATH_FILE="$CONFIG_DIR/workspace-path"
 LAST_APPLIED_FILE="$CONFIG_DIR/last-applied"
-EXPECTED_REMOTE="https://github.com/ReggieAlbiosA/reggie-ubuntu-workspace.git"
+EXPECTED_REMOTE="https://github.com/ReggieAlbiosA/ruw.git"
 
 # ============================================
 # Workspace Discovery
@@ -42,11 +42,11 @@ find_workspace() {
 
     # 2. Search common locations
     local search_paths=(
-        "$HOME/Documents/reggie-ubuntu-workspace"
-        "$HOME/reggie-ubuntu-workspace"
-        "$HOME/workspace/reggie-ubuntu-workspace"
-        "$HOME/dev/reggie-ubuntu-workspace"
-        "$HOME/projects/reggie-ubuntu-workspace"
+        "$HOME/Documents/ruw"
+        "$HOME/ruw"
+        "$HOME/workspace/ruw"
+        "$HOME/dev/ruw"
+        "$HOME/projects/ruw"
     )
 
     for path in "${search_paths[@]}"; do
@@ -168,13 +168,13 @@ do_local_update() {
 
     local workspace_path
     if ! workspace_path=$(find_workspace); then
-        echo -e "${RED}Error: Could not find reggie-ubuntu-workspace${NC}"
+        echo -e "${RED}Error: Could not find ruw${NC}"
         echo -e "${YELLOW}Searched locations:${NC}"
-        echo "  - ~/Documents/reggie-ubuntu-workspace"
-        echo "  - ~/reggie-ubuntu-workspace"
-        echo "  - ~/workspace/reggie-ubuntu-workspace"
-        echo "  - ~/dev/reggie-ubuntu-workspace"
-        echo "  - ~/projects/reggie-ubuntu-workspace"
+        echo "  - ~/Documents/ruw"
+        echo "  - ~/ruw"
+        echo "  - ~/workspace/ruw"
+        echo "  - ~/dev/ruw"
+        echo "  - ~/projects/ruw"
         echo ""
         echo -e "${CYAN}Please ensure the workspace is cloned to one of these locations.${NC}"
         exit 1
@@ -275,13 +275,13 @@ do_remote_update() {
 
     local workspace_path
     if ! workspace_path=$(find_workspace); then
-        echo -e "${RED}Error: Could not find reggie-ubuntu-workspace${NC}"
+        echo -e "${RED}Error: Could not find ruw${NC}"
         echo -e "${YELLOW}Searched locations:${NC}"
-        echo "  - ~/Documents/reggie-ubuntu-workspace"
-        echo "  - ~/reggie-ubuntu-workspace"
-        echo "  - ~/workspace/reggie-ubuntu-workspace"
-        echo "  - ~/dev/reggie-ubuntu-workspace"
-        echo "  - ~/projects/reggie-ubuntu-workspace"
+        echo "  - ~/Documents/ruw"
+        echo "  - ~/ruw"
+        echo "  - ~/workspace/ruw"
+        echo "  - ~/dev/ruw"
+        echo "  - ~/projects/ruw"
         echo ""
         echo -e "${CYAN}Please ensure the workspace is cloned to one of these locations.${NC}"
         exit 1

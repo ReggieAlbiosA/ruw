@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup.sh
-# Run with: curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash -s -- -y
+# Run with: curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/setup.sh | bash -s -- -y
 #
 # Install overrides:
 #   -y, --yes           Auto-accept all prompts
@@ -85,10 +85,10 @@ if [ ! -t 0 ] && [ "$AUTO_YES" != true ]; then
     echo ""
     echo "Please run with one of these methods:"
     echo "  1. Auto-accept all prompts:"
-    echo "     curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh | bash -s -- -y"
+    echo "     curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/setup.sh | bash -s -- -y"
     echo ""
     echo "  2. Download and run:"
-    echo "     curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/setup.sh -o setup.sh"
+    echo "     curl -fsSL https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/setup.sh -o setup.sh"
     echo "     chmod +x setup.sh"
     echo "     ./setup.sh"
     echo ""
@@ -255,7 +255,7 @@ if [ -f "$PACKAGES_SCRIPT" ]; then
         echo -e "${YELLOW}! Packages installation encountered errors. Continuing...${NC}"
     }
 else
-    PACKAGES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/packages.sh"
+    PACKAGES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/def/packages.sh"
     echo "Downloading packages.sh..."
     if curl -fsSL "$PACKAGES_URL" -o /tmp/packages.sh; then
         bash /tmp/packages.sh || {
@@ -305,7 +305,7 @@ elif prompt_optional "Install apps"; then
             echo -e "${YELLOW}! Apps installation encountered errors. Continuing...${NC}"
         }
     else
-        APPS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/apps.sh"
+        APPS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/def/apps.sh"
         echo "Downloading apps.sh..."
         if curl -fsSL "$APPS_URL" -o /tmp/apps.sh; then
             bash /tmp/apps.sh $APPS_FLAGS || {
@@ -359,7 +359,7 @@ else
             echo -e "  ${RED}! Workspace launcher script failed${NC}"
         fi
     else
-        LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/logon-launch-workspace.sh"
+        LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/def/logon-launch-workspace.sh"
         echo "Downloading logon-launch-workspace.sh..."
         if curl -fsSL "$LAUNCHER_SETUP_URL" -o /tmp/logon-launch-workspace.sh; then
             if bash /tmp/logon-launch-workspace.sh; then
@@ -444,7 +444,7 @@ if command_exists claude; then
                     echo -e "  ${YELLOW}! MCP configuration had errors. Continuing...${NC}"
                 }
             else
-                CLAUDE_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/claude-code.sh"
+                CLAUDE_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/claude-code.sh"
                 echo "Downloading claude-code.sh..."
                 if curl -fsSL "$CLAUDE_SETUP_URL" -o /tmp/claude-code.sh; then
                     bash /tmp/claude-code.sh $CLAUDE_FLAGS || {
@@ -480,7 +480,7 @@ else
                 echo -e "  ${YELLOW}! Claude Code setup had errors. Continuing...${NC}"
             }
         else
-            CLAUDE_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/claude-code.sh"
+            CLAUDE_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/claude-code.sh"
             echo "Downloading claude-code.sh..."
             if curl -fsSL "$CLAUDE_SETUP_URL" -o /tmp/claude-code.sh; then
                 bash /tmp/claude-code.sh $CLAUDE_FLAGS || {
@@ -542,7 +542,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! CLI Tools setup had errors. Continuing...${NC}"
                 }
             else
-                CLI_TOOLS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/cli-tools.sh"
+                CLI_TOOLS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/cli-tools.sh"
                 echo "Downloading cli-tools.sh..."
                 if curl -fsSL "$CLI_TOOLS_URL" -o /tmp/cli-tools.sh; then
                     bash /tmp/cli-tools.sh $CLI_FLAGS || {
@@ -577,7 +577,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! CLI Tools setup had errors. Continuing...${NC}"
                 }
             else
-                CLI_TOOLS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/cli-tools.sh"
+                CLI_TOOLS_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/cli-tools.sh"
                 echo "Downloading cli-tools.sh..."
                 if curl -fsSL "$CLI_TOOLS_URL" -o /tmp/cli-tools.sh; then
                     bash /tmp/cli-tools.sh $CLI_FLAGS || {
@@ -624,7 +624,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Git Identity setup had errors. Continuing...${NC}"
                 }
             else
-                GIT_IDENTITY_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/git-identity.sh"
+                GIT_IDENTITY_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/git-identity.sh"
                 echo "Downloading git-identity.sh..."
                 if curl -fsSL "$GIT_IDENTITY_URL" -o /tmp/git-identity.sh; then
                     bash /tmp/git-identity.sh $GIT_FLAGS || {
@@ -659,7 +659,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Git Identity setup had errors. Continuing...${NC}"
                 }
             else
-                GIT_IDENTITY_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/git-identity.sh"
+                GIT_IDENTITY_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/git-identity.sh"
                 echo "Downloading git-identity.sh..."
                 if curl -fsSL "$GIT_IDENTITY_URL" -o /tmp/git-identity.sh; then
                     bash /tmp/git-identity.sh $GIT_FLAGS || {
@@ -703,7 +703,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Bash Aliases setup had errors. Continuing...${NC}"
                 }
             else
-                ALIASES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/aliases.sh"
+                ALIASES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/aliases.sh"
                 echo "Downloading aliases.sh..."
                 if curl -fsSL "$ALIASES_URL" -o /tmp/aliases.sh; then
                     bash /tmp/aliases.sh || {
@@ -735,7 +735,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Bash Aliases setup had errors. Continuing...${NC}"
                 }
             else
-                ALIASES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/aliases.sh"
+                ALIASES_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/aliases.sh"
                 echo "Downloading aliases.sh..."
                 if curl -fsSL "$ALIASES_URL" -o /tmp/aliases.sh; then
                     bash /tmp/aliases.sh || {
@@ -778,7 +778,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Oh My Posh setup had errors. Continuing...${NC}"
                 }
             else
-                OMP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/oh-my-posh.sh"
+                OMP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/oh-my-posh.sh"
                 echo "Downloading oh-my-posh.sh..."
                 if curl -fsSL "$OMP_URL" -o /tmp/oh-my-posh.sh; then
                     bash /tmp/oh-my-posh.sh || {
@@ -810,7 +810,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Oh My Posh setup had errors. Continuing...${NC}"
                 }
             else
-                OMP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/oh-my-posh.sh"
+                OMP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/oh-my-posh.sh"
                 echo "Downloading oh-my-posh.sh..."
                 if curl -fsSL "$OMP_URL" -o /tmp/oh-my-posh.sh; then
                     bash /tmp/oh-my-posh.sh || {
@@ -868,7 +868,7 @@ if [ "$SKIP_OPTIONAL" != true ]; then
                     echo -e "  ${YELLOW}! Google Drive setup had errors. Continuing...${NC}"
                 }
             else
-                GDRIVE_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/opt/google-drive.sh"
+                GDRIVE_URL="https://raw.githubusercontent.com/ReggieAlbiosA/ruw/main/opt/google-drive.sh"
                 echo "Downloading google-drive.sh..."
                 if curl -fsSL "$GDRIVE_URL" -o /tmp/google-drive.sh; then
                     bash /tmp/google-drive.sh $GDRIVE_FLAGS || {
