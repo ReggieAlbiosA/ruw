@@ -17,6 +17,49 @@ MAGENTA='\033[0;35m'
 WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
+# ============================================
+# Environment Detection
+# ============================================
+is_container() {
+    # Check for Docker
+    [ -f /.dockerenv ] && return 0
+    # Check cgroup for docker/lxc/podman/containerd
+    grep -qE '(docker|lxc|podman|containerd)' /proc/1/cgroup 2>/dev/null && return 0
+    # Check for container environment variable
+    [ -n "$container" ] && return 0
+    return 1
+}
+
+is_vm() {
+    # Check systemd-detect-virt if available
+    if command -v systemd-detect-virt &>/dev/null; then
+        local virt
+        virt=$(systemd-detect-virt 2>/dev/null)
+        [[ "$virt" != "none" && "$virt" != "" ]] && return 0
+    fi
+    # Check DMI for hypervisor markers
+    if [ -r /sys/class/dmi/id/product_name ]; then
+        grep -qiE '(virtualbox|vmware|qemu|kvm|hyper-v|xen|parallels)' /sys/class/dmi/id/product_name 2>/dev/null && return 0
+    fi
+    # Check CPU flags for hypervisor
+    grep -q "^flags.*hypervisor" /proc/cpuinfo 2>/dev/null && return 0
+    return 1
+}
+
+detect_environment() {
+    if is_container; then
+        ENV_TYPE="container"
+    elif is_vm; then
+        ENV_TYPE="vm"
+    else
+        ENV_TYPE="baremetal"
+    fi
+    export ENV_TYPE
+}
+
+# Run detection
+detect_environment
+
 # Default flags
 AUTO_YES=false
 
@@ -190,6 +233,11 @@ echo -e "${CYAN}========================================${NC}"
 if [ "$AUTO_YES" = true ]; then
     echo -e "${GRAY}  Mode: Auto-accept all${NC}"
 fi
+echo -e "${GRAY}  Environment: ${WHITE}${ENV_TYPE}${NC}"
+
+if [ "$ENV_TYPE" = "container" ]; then
+    echo -e "${YELLOW}  Note: Some modules will be skipped (GUI apps, desktop features)${NC}"
+fi
 
 echo -e "\n${CYAN}You will be prompted for each installation.${NC}"
 
@@ -239,7 +287,10 @@ update_progress
 echo -e "\n${WHITE}[2/7] Apps${NC}"
 echo -e "  ${GRAY}(Cursor, Antigravity)${NC}"
 
-if prompt_optional "Install apps"; then
+if [ "$ENV_TYPE" = "container" ]; then
+    echo -e "  ${YELLOW}○ Skipped: GUI apps not supported in containers${NC}"
+    log_skipped "Apps (container environment)"
+elif prompt_optional "Install apps"; then
     echo -e "  ${CYAN}> Running apps installation...${NC}"
     show_realtime_header
 
@@ -286,44 +337,50 @@ update_progress
 # [3/7] Workspace Launcher (auto-install, no prompt)
 # ============================================
 echo -e "\n${WHITE}[3/7] Workspace Launcher${NC}"
-echo -e "  ${CYAN}> Configuring workspace automation...${NC}"
 
-show_realtime_header
-
-# Download/run launcher setup
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
-LAUNCHER_SETUP_SCRIPT="$SCRIPT_DIR/def/logon-launch-workspace.sh"
-LAUNCHER_SUCCESS=false
-
-if [ -f "$LAUNCHER_SETUP_SCRIPT" ]; then
-    echo "Running local logon-launch-workspace.sh..."
-    if bash "$LAUNCHER_SETUP_SCRIPT"; then
-        LAUNCHER_SUCCESS=true
-    else
-        echo -e "  ${RED}! Workspace launcher script failed${NC}"
-    fi
+if [ "$ENV_TYPE" = "container" ]; then
+    echo -e "  ${YELLOW}○ Skipped: Desktop launcher not supported in containers${NC}"
+    log_skipped "Workspace Launcher (container environment)"
 else
-    LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/logon-launch-workspace.sh"
-    echo "Downloading logon-launch-workspace.sh..."
-    if curl -fsSL "$LAUNCHER_SETUP_URL" -o /tmp/logon-launch-workspace.sh; then
-        if bash /tmp/logon-launch-workspace.sh; then
+    echo -e "  ${CYAN}> Configuring workspace automation...${NC}"
+
+    show_realtime_header
+
+    # Download/run launcher setup
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+    LAUNCHER_SETUP_SCRIPT="$SCRIPT_DIR/def/logon-launch-workspace.sh"
+    LAUNCHER_SUCCESS=false
+
+    if [ -f "$LAUNCHER_SETUP_SCRIPT" ]; then
+        echo "Running local logon-launch-workspace.sh..."
+        if bash "$LAUNCHER_SETUP_SCRIPT"; then
             LAUNCHER_SUCCESS=true
         else
             echo -e "  ${RED}! Workspace launcher script failed${NC}"
         fi
-        rm -f /tmp/logon-launch-workspace.sh
     else
-        echo -e "  ${RED}! Failed to download logon-launch-workspace.sh${NC}"
+        LAUNCHER_SETUP_URL="https://raw.githubusercontent.com/ReggieAlbiosA/reggie-ubuntu-workspace/main/def/logon-launch-workspace.sh"
+        echo "Downloading logon-launch-workspace.sh..."
+        if curl -fsSL "$LAUNCHER_SETUP_URL" -o /tmp/logon-launch-workspace.sh; then
+            if bash /tmp/logon-launch-workspace.sh; then
+                LAUNCHER_SUCCESS=true
+            else
+                echo -e "  ${RED}! Workspace launcher script failed${NC}"
+            fi
+            rm -f /tmp/logon-launch-workspace.sh
+        else
+            echo -e "  ${RED}! Failed to download logon-launch-workspace.sh${NC}"
+        fi
     fi
-fi
 
-show_realtime_footer
+    show_realtime_footer
 
-if [ "$LAUNCHER_SUCCESS" = true ]; then
-    echo -e "  ${GREEN}✓ Workspace launcher configured${NC}"
-    log_installed "Workspace Launcher"
-else
-    log_failed "Workspace Launcher"
+    if [ "$LAUNCHER_SUCCESS" = true ]; then
+        echo -e "  ${GREEN}✓ Workspace launcher configured${NC}"
+        log_installed "Workspace Launcher"
+    else
+        log_failed "Workspace Launcher"
+    fi
 fi
 
 update_progress
@@ -356,6 +413,9 @@ echo -e "${MAGENTA}========================================${NC}"
 
 # --- Claude Code ---
 echo -e "\n${MAGENTA}[Optional 1/4] Claude Code${NC}"
+if [ "$ENV_TYPE" = "container" ]; then
+    echo -e "  ${YELLOW}! Note: MCP servers may have limited functionality in containers${NC}"
+fi
 if command_exists claude; then
     claude_version=$(claude --version 2>/dev/null)
     echo -e "  ${GREEN}✓ Already installed: $claude_version${NC}"
@@ -777,7 +837,10 @@ if [ "$SKIP_OPTIONAL" != true ]; then
     echo -e "\n${MAGENTA}[Optional 6/6] Google Drive Integration${NC}"
     echo -e "  ${GRAY}(GNOME Online Accounts for cloud storage)${NC}"
 
-    if dpkg -l gnome-online-accounts 2>/dev/null | grep -q "^ii"; then
+    if [ "$ENV_TYPE" = "container" ]; then
+        echo -e "  ${YELLOW}○ Skipped: Google Drive needs desktop environment${NC}"
+        log_skipped "Google Drive (container environment)"
+    elif dpkg -l gnome-online-accounts 2>/dev/null | grep -q "^ii"; then
         echo -e "  ${GREEN}✓ Already installed${NC}"
         log_installed "Google Drive Integration"
 
