@@ -3,7 +3,7 @@
 # Configures bash aliases for the Reggie Ubuntu Workspace
 # Run standalone or as part of setup.sh
 
-set -e
+# Note: set -e removed to allow graceful error handling - script continues on failures
 
 # Colors
 RED='\033[0;31m'
@@ -75,9 +75,9 @@ gcp() {
 alias ~='cd ~'
 alias ..='cd ..'
 alias ...='cd ../..'
-alias te='gnome-text-editor'
 alias claude='claude --dangerously-skip-permissions'
-alias folders='nautilus &'
+alias te='gnome-text-editor &>/dev/null & disown'
+alias files='nautilus --new-window &>/dev/null & disown'
 alias t='tldr'
 alias cat='batcat'
 alias m='micro'
@@ -93,7 +93,7 @@ alias dockerlun='nohup /opt/docker-desktop/bin/docker-desktop >/dev/null 2>&1 & 
 alias ft='file  --mime-type *'
 alias user-packages='apt-mark showmanual'
 alias eb='m ~/.bashrc'
-alias au='m ~/Dev/cli/reggie-ubuntu-workspace/opt/aliases.sh'
+alias ea='m ~/Dev/cli/ruw/opt/aliases.sh'
 alias docs='cd ~/Documents'
 alias dls='cd ~/Downloads'
 alias dts='cd ~/Desktop'
@@ -421,24 +421,33 @@ if check_aliases_installed; then
     show_realtime_header
 
     # Remove old block and add updated one
-    sed -i "/$START_MARKER/,/$END_MARKER/d" "$BASHRC"
-    printf '%s\n' "$ALIASES_CONTENT" >> "$BASHRC"
-    echo "Updated bash aliases in $BASHRC"
-
-    show_realtime_footer
-    echo -e "  ${GREEN}✓ Aliases updated${NC}"
+    if sed -i "/$START_MARKER/,/$END_MARKER/d" "$BASHRC" 2>/dev/null; then
+        if printf '%s\n' "$ALIASES_CONTENT" >> "$BASHRC"; then
+            echo "Updated bash aliases in $BASHRC"
+            show_realtime_footer
+            echo -e "  ${GREEN}✓ Aliases updated${NC}"
+        else
+            echo -e "  ${RED}! Failed to write aliases to $BASHRC${NC}"
+            show_realtime_footer
+        fi
+    else
+        echo -e "  ${RED}! Failed to remove old aliases block from $BASHRC${NC}"
+        show_realtime_footer
+    fi
 else
     echo -e "\n  ${YELLOW}○ Aliases not configured${NC}"
     echo -e "  ${CYAN}> Installing bash aliases...${NC}"
     show_realtime_header
 
     # Add aliases to .bashrc
-    echo "" >> "$BASHRC"
-    printf '%s\n' "$ALIASES_CONTENT" >> "$BASHRC"
-    echo "Added bash aliases in $BASHRC"
-
-    show_realtime_footer
-    echo -e "  ${GREEN}✓ Aliases installed${NC}"
+    if echo "" >> "$BASHRC" && printf '%s\n' "$ALIASES_CONTENT" >> "$BASHRC"; then
+        echo "Added bash aliases in $BASHRC"
+        show_realtime_footer
+        echo -e "  ${GREEN}✓ Aliases installed${NC}"
+    else
+        echo -e "  ${RED}! Failed to write aliases to $BASHRC${NC}"
+        show_realtime_footer
+    fi
 fi
 
 echo -e "\n${GREEN}========================================${NC}"
